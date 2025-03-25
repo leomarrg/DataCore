@@ -1,0 +1,10 @@
+<!-- dashboard/templates/dashboard/widgets/kpi.html -->
+<div class="kpi-container text-center">
+    <div class="display-4 mb-2">{{ widget.data.count }}</div>
+    <div class="text-muted">{{ widget.data.title }}</div>
+    {% if widget.data.icon %}
+    <div class="mt-3">
+        <i class="fa {{ widget.data.icon }} fa-3x text-primary"></i>
+    </div>
+    {% endif %}
+</div>

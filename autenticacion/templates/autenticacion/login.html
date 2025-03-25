@@ -1,0 +1,239 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DataCore - Login</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" rel="stylesheet">
+    <!-- AOS Animation Library -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.css" rel="stylesheet">
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="{% static 'core/css/style.css' %}" rel="stylesheet">
+    
+    <style>
+        /* Page structure to keep footer at bottom */
+        html, body {
+            height: 100%;
+            margin: 0;
+        }
+        
+        body {
+            font-family: "Montserrat" sans-serif;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+        
+        .content-wrapper {
+            flex: 1 0 auto;
+        }
+        
+        .custom-footer {
+            flex-shrink: 0;
+            background-color: #4894a6;
+            color: white;
+            padding: 30px 0;
+        }
+        
+        /* Login section styling */
+        .login-section {
+            position: relative;
+            min-height: calc(100vh - 80px); /* 80px is approximately the footer height */
+            /* removed background-image from here */
+        }
+
+        .login-section::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: -7%;
+            width: 100%;
+            height: 100%;
+            background-image: url('{% static "core/images/Cohete@2x.png" %}');
+            background-repeat: no-repeat;
+            /* other background properties */
+            opacity: 0.3;
+            z-index: -1; /* Place behind content */
+        }
+        
+        .rounded-circle-button {
+            width: 800px; /* Increased to 1200px */
+            height: 150px;
+            border-radius: 75px;
+            background-color: #4894a6;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+            border: 1px solid #4894a6;
+            overflow: hidden;
+            max-width: 100%; /* Ensures it doesn't overflow on smaller screens */
+        }
+        
+        /* MODIFIED: Changed logo size from 50% to 70% */
+        .rounded-circle-button img {
+            max-width: 70%;
+            max-height: 70%;
+        }
+        
+        .login-form-container {
+            background-color: rgba(255, 255, 255, 0.8);
+            border-radius: 10px;
+            padding: 30px;
+        }
+        
+        .form-control {
+            border-radius: 50px;
+            padding: 12px 20px;
+            background-color: rgb(234, 234, 234);
+            border: 1px solid #dee2e6;
+            text-align: center;
+            color: #000;
+            font-weight: 600;
+        }
+        
+        .login-submit-btn {
+            background-color: #FF9613;
+            color: white;
+            border-radius: 50px;
+            padding: 12px 20px;
+            font-weight: 500;
+            border: none;
+            transition: all 0.3s ease;
+        }
+        
+        .login-submit-btn:hover {
+            background-color: #92560b;
+            transform: translateY(-2px);
+        }
+
+        /* Add this to your existing style section */
+.form-control:focus {
+    background-color: rgb(234, 234, 234);  /* Same as the normal state */
+    border-color: #dee2e6;  /* Same as the normal state */
+    box-shadow: none;  /* Remove the default focus shadow */
+    color: #000;  /* Keep text color black */
+    text-align: center;  /* Keep text centered */
+}
+
+/* This ensures placeholder remains centered when focused */
+.form-control:focus::placeholder {
+    text-align: center;
+    opacity: 0.5;  /* Usually becomes more transparent on focus */
+}
+
+    /* Additional CSS for cross-browser compatibility */
+    ::placeholder {
+        text-align: center;
+    }
+    :-ms-input-placeholder {
+        text-align: center;
+    }
+    ::-ms-input-placeholder {
+        text-align: center;
+    }
+
+    .login-submit-btn {
+        width: 100px; /* Custom width for the button */
+    }
+
+    /* Error messages styling */
+    .alert {
+        border-radius: 10px;
+        margin-bottom: 20px;
+    }
+    </style>
+</head>
+<body>
+
+<div class="content-wrapper">
+    <!-- Login Form Section -->
+    <section class="login-section section">
+        <div class="container">
+            <div class="row justify-content-center">
+                <!-- Full width for logo container -->
+                <div class="col-12" data-aos="fade-up" data-aos-duration="1000">
+                    <!-- Logo/Image Button at Top -->
+                    <div class="d-flex justify-content-center mb-4">
+                        <a href="{% url 'landing' %}" class="logo-link">
+                            <div class="rounded-circle-button">
+                                <img src="{% static 'core/images/DATACORE_LOGO.png' %}" alt="DataCore Logo" class="img-fluid">
+                            </div>
+                        </a>
+                    </div>
+                </div>
+                
+                <!-- Original width for form container -->
+                <div class="col-md-9 col-lg-7">    
+                    <!-- Display Django messages -->
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="alert alert-{{ message.tags }}" role="alert">
+                                {{ message }}
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                    
+                    <!-- Login Form with Transparent Background -->
+                    <div class="login-form-container">
+                        <form method="post" action="{% url 'login' %}">
+                            {% csrf_token %}
+                            <div class="mb-3">
+                                {{ form.username }}
+                                {% if form.username.errors %}
+                                    <div class="text-danger">
+                                        {{ form.username.errors }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <div class="mb-3">
+                                {{ form.password }}
+                                {% if form.password.errors %}
+                                    <div class="text-danger">
+                                        {{ form.password.errors }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <!-- Remember me checkbox is available in form.remember_me but not displayed as per template -->
+                            <div class="d-flex justify-content-center">
+                                <button type="submit" class="btn login-submit-btn">Login</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+</div>
+
+<!-- Footer -->
+<footer class="custom-footer">
+    <div class="container">
+        <div class="text-center">
+            <p>&copy; 2025 Powered By WhiteCanvasPR</p>
+        </div>
+    </div>
+</footer>
+
+<!-- Bootstrap JS Bundle with Popper -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script>
+<!-- AOS Animation Library -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.js"></script>
+<!-- Font Awesome Icons -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/js/all.min.js"></script>
+
+<script>
+    // Initialize AOS
+    AOS.init({
+        once: true,
+        duration: 800,
+        easing: 'ease-in-out'
+    });
+</script>
+</body>
+</html>

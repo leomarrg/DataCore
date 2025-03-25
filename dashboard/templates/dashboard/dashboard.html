@@ -1,0 +1,176 @@
+<!-- dashboard/templates/dashboard/dashboard.html -->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ company.name }} - Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .widget-small { min-height: 200px; }
+        .widget-medium { min-height: 300px; }
+        .widget-large { min-height: 400px; }
+        .dashboard-widget { margin-bottom: 20px; }
+        .widget-content { padding: 15px; }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="#">{{ company.name }}</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="{% url 'company_dashboard' %}">Dashboard</a>
+                    </li>
+                    
+                    {% if visible_departments|length > 1 %}
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="navbarDepartmentDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            Departamentos
+                        </a>
+                        <ul class="dropdown-menu" aria-labelledby="navbarDepartmentDropdown">
+                            {% for dept in visible_departments %}
+                            <li>
+                                <a class="dropdown-item {% if dept.id == selected_department.id %}active{% endif %}" 
+                                   href="{% url 'company_dashboard' %}?department={{ dept.id }}">
+                                    {{ dept.name }}
+                                </a>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    </li>
+                    {% endif %}
+                    
+                    <!-- Otros elementos del menú que ya tengas -->
+                </ul>
+                <span class="navbar-text me-3">
+                    Usuario: {% if employee.user.first_name or employee.user.last_name %}{{ employee.user.first_name }} {{ employee.user.last_name }}{% else %}{{ employee.user.username }}{% endif %} | 
+                    Departamento: {{ employee.department.name }}
+                </span>
+                <a href="{% url 'logout' %}" class="btn btn-outline-light btn-sm">Cerrar sesión</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        {% if messages %}
+        <div class="messages">
+            {% for message in messages %}
+            <div class="alert {% if message.tags == 'error' %}alert-danger{% elif message.tags == 'success' %}alert-success{% elif message.tags == 'warning' %}alert-warning{% else %}alert-info{% endif %} alert-dismissible fade show">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        {% if visible_departments|length > 1 %}
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">Seleccionar Departamento</h5>
+                    </div>
+                    <div class="card-body">
+                        <form method="get" id="departmentForm">
+                            <div class="input-group">
+                                <select class="form-select" name="department" id="departmentSelect" onchange="this.form.submit()">
+                                    {% for dept in visible_departments %}
+                                    <option value="{{ dept.id }}" {% if dept.id == selected_department.id %}selected{% endif %}>
+                                        {{ dept.name }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                                <button class="btn btn-primary" type="submit">Ver</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="mb-0">Información del Departamento</h5>
+                    </div>
+                    <div class="card-body">
+                        <p><strong>Departamento actual:</strong> {{ selected_department.name }}</p>
+                        <p><strong>Nivel de acceso:</strong> 
+                        {% if selected_department.access_level == 'admin' %}Administrador
+                        {% elif selected_department.access_level == 'manager' %}Gerencial
+                        {% else %}Usuario Regular{% endif %}
+                        </p>
+                        <p><strong>Empleados:</strong> {{ selected_department.employees.count }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="row">
+            {% for widget in widgets %}
+            <div class="col-md-{% if widget.config.size == 'small' %}4{% elif widget.config.size == 'medium' %}6{% else %}12{% endif %}">
+                <div class="card dashboard-widget widget-{{ widget.config.size }}">
+                    <div class="card-header bg-light">
+                        <h5 class="card-title mb-0">{{ widget.widget.name }}</h5>
+                    </div>
+                    <div class="card-body widget-content">
+                        {% if widget.widget.widget_type == 'chart' %}
+                            {% include 'dashboard/widgets/chart.html' %}
+                        {% elif widget.widget.widget_type == 'table' %}
+                            {% include 'dashboard/widgets/table.html' %}
+                        {% elif widget.widget.widget_type == 'kpi' %}
+                            {% include 'dashboard/widgets/kpi.html' %}
+                        {% elif widget.widget.widget_type == 'list' %}
+                            {% include 'dashboard/widgets/list.html' %}
+                        {% else %}
+                            <div class="alert alert-warning">
+                                Tipo de widget no soportado: {{ widget.widget.widget_type }}
+                            </div>
+                        {% endif %}
+                        
+                        {% if widget.data.error %}
+                        <div class="alert alert-danger">
+                            {{ widget.data.error }}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="col-12">
+                <div class="alert alert-info">
+                    No hay widgets configurados para tu dashboard.
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <div class="container mt-5">
+            <div class="row justify-content-center">
+                <div class="col-md-8">
+                    <div class="card">
+                        <div class="card-header bg-info text-white">
+                            <h4 class="mb-0">Bienvenido</h4>
+                        </div>
+                        <div class="card-body text-center">
+                            <h3>Tu dashboard está en configuración</h3>
+                            <p class="lead mt-3">El administrador del sistema aún no ha configurado tu dashboard.</p>
+                            <p>Por favor, contacta al administrador para completar la configuración.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
+

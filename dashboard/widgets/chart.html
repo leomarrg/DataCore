@@ -1,0 +1,27 @@
+<!-- dashboard/templates/dashboard/widgets/chart.html -->
+<div class="chart-container">
+    <canvas id="chart-{{ widget.config.id }}"></canvas>
+</div>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        var ctx = document.getElementById('chart-{{ widget.config.id }}').getContext('2d');
+        var data = {{ widget.data|safe }};
+        
+        new Chart(ctx, {
+            type: '{% if "datasets" in widget.data and widget.data.datasets|length > 1 %}bar{% else %}line{% endif %}',
+            data: {
+                labels: data.labels,
+                datasets: data.datasets
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    });
+</script>

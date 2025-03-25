@@ -1,0 +1,27 @@
+<!-- dashboard/templates/dashboard/admin/configure_widget.html -->
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block title %}Configurar Widget - {{ widget_config.widget.name }}{% endblock %}
+
+{% block content %}
+<div class="module">
+    <h1>Configurar Widget: {{ widget_config.widget.name }}</h1>
+    
+    <div class="description">
+        <p>Personaliza la configuración para este widget en el dashboard de {{ widget_config.dashboard.company.name }}.</p>
+    </div>
+    
+    <form method="post">
+        {% csrf_token %}
+        <div>
+            {{ form.as_p }}
+        </div>
+        
+        <div class="submit-row">
+            <input type="submit" value="Guardar" class="default">
+            <a href="{% url 'admin:dashboard_companydashboard_change' widget_config.dashboard.id %}" class="button cancel-link">Cancelar</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

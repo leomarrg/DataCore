@@ -1,0 +1,79 @@
+<!-- dashboard/templates/dashboard/admin/setup_dashboard.html -->
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block title %}Configurar Dashboard - {{ company.name }}{% endblock %}
+
+{% block extrastyle %}
+<style>
+    .widget-selector {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 15px;
+        margin-top: 20px;
+    }
+    .widget-card {
+        border: 1px solid #ccc;
+        border-radius: 5px;
+        padding: 15px;
+        position: relative;
+    }
+    .widget-card.selected {
+        border-color: #79aec8;
+        background-color: #f5f9fa;
+    }
+    .widget-card label {
+        display: block;
+        cursor: pointer;
+        padding-left: 25px;
+    }
+    .widget-card input[type="checkbox"] {
+        position: absolute;
+        left: 10px;
+        top: 50%;
+        transform: translateY(-50%);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="module">
+    <h1>Configurar Dashboard para {{ company.name }}</h1>
+    
+    <div class="description">
+        <p>Selecciona los widgets que deseas mostrar en el dashboard de esta compañía.</p>
+    </div>
+    
+    <form method="post">
+        {% csrf_token %}
+        
+        {% if existing_widgets %}
+        <div class="module">
+            <h2>Widgets actuales</h2>
+            <ul>
+                {% for widget_config in existing_widgets %}
+                <li>{{ widget_config.widget.name }} ({{ widget_config.widget.get_widget_type_display }})</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+        
+        <div class="module">
+            <h2>Seleccionar widgets</h2>
+            <div class="widget-selector">
+                {% for id, name in form.widgets.field.choices %}
+                <div class="widget-card">
+                    <input type="checkbox" name="widgets" value="{{ id }}" id="widget_{{ id }}" {% if id|stringformat:"i" in form.widgets.value %}checked{% endif %}>
+                    <label for="widget_{{ id }}">{{ name }}</label>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        
+        <div class="submit-row">
+            <input type="submit" value="Guardar" class="default">
+            <a href="{% url 'admin:autenticacion_company_changelist' %}" class="button cancel-link">Cancelar</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

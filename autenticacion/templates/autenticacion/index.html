@@ -1,0 +1,224 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Modern Website Template</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" rel="stylesheet">
+    <!-- AOS Animation Library -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.css" rel="stylesheet">
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="{% static 'autenticacion/css/style.css' %}" rel="stylesheet">
+    <script src="{% static 'autenticacion/js/scripts.js' %}"></script>
+</head>
+<body>
+    <div class="sticky-nav">
+        <div class="container">
+            <!-- Flex container for logo and navbar -->
+            <div class="d-flex align-items-center">
+                <!-- Logo with balanced spacing -->
+                <div class="logo-container" data-aos="fade-right" data-aos-duration="800">
+                    <img src="{% static 'autenticacion/images/DATACORE_LOGO.png' %}" alt="DataCore Logo" class="img-fluid" style="max-height: 60px;">
+                </div>
+                <!-- Navbar container -->
+                <div class="navbar-container" data-aos="fade-down" data-aos-duration="1000">
+                    <!-- All items container with equal spacing -->
+                    <div class="navbar-items-container">
+                        <!-- Navigation links -->
+                        <div class="nav-items-group">
+                            <div class="nav-item">
+                                <a class="nav-link active" href="#home">Home</a>
+                            </div>
+                            <div class="nav-item">
+                                <a class="nav-link" href="#about">About Us</a>
+                            </div>
+                            <div class="nav-item">
+                                <a class="nav-link" href="#services">Services</a>
+                            </div>
+                            <div class="nav-item">
+                                <a class="nav-link" href="#contact">Contact Us</a>
+                            </div>
+                        </div>
+                        <!-- Login button -->
+                        <div class="login-item">
+                            <button class="login-btn" onclick="window.location.href='{% url 'login' %}'">Log In</button>                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Home Section with Navigation -->
+    <section id="home" class="section">
+        <!-- Home section content -->
+        <div class="vertical-center-content">
+            <div class="container">
+                <div class="row justify-content-center text-center">
+                    <div class="col-lg-8" data-aos="fade-up" data-aos-duration="1200">
+                        <h1 class="display-4 fw-bold">DataCore</h1>
+                        <p class="lead">Your trusted partner for innovative data solutions and digital transformation.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- About Section with Balanced Spacing -->
+    <section id="about" class="section">
+        <div class="about-grid">
+            <div class="about-left" data-aos="fade-right" data-aos-duration="1000">
+                <h1 class="display-4 fw-bold mb-4">About Us</h1>
+                <p>
+                    Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do 
+                    eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis 
+                    nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure 
+                    dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur 
+                    sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+                </p>
+                <p>Class aptent taciti sociosqu ad litora torquent.</p>
+            </div>
+            
+            <div class="about-right" data-aos="fade-left" data-aos-duration="1000">
+                <img src="{% static 'autenticacion/images/WHITE_CANVAS_LOGO.png' %}" alt="About Us Image" class="about-image">
+            </div>
+        </div>
+    </section>
+
+    <!-- Services Section with Balanced Spacing -->
+    <section id="services" class="section services-section">
+        <div class="services-background"></div>
+        <div class="container">
+            <div class="row">
+                <div class="col-12 text-center mb-5" data-aos="fade-up">
+                    <h2 class="display-5 fw-bold">Our Services</h2>
+                    <p class="lead">Discover what we can offer to help your business grow</p>
+                </div>
+            </div>
+            <div class="row">
+                <!-- Services cards with balanced spacing -->
+                <div class="col-md-4 mb-4" data-aos="zoom-in" data-aos-duration="800">
+                    <div class="card h-100 border-0">
+                        <div class="card-body text-center p-4">
+                            <span class="service-title">Service One</span>
+                            <p class="mt-3">Lorem ipsum dolor sit amet, consectetur adipiscing elit. Ut elit tellus, luctus nec ullamcorper mattis.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4 mb-4" data-aos="zoom-in" data-aos-duration="800">
+                    <div class="card h-100 border-0">
+                        <div class="card-body text-center p-4">
+                            <span class="service-title">Service Two</span>
+                            <p class="mt-3">Lorem ipsum dolor sit amet, consectetur adipiscing elit. Ut elit tellus, luctus nec ullamcorper mattis.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4 mb-4" data-aos="zoom-in" data-aos-duration="800">
+                    <div class="card h-100 border-0">
+                        <div class="card-body text-center p-4">
+                            <span class="service-title">Service Three</span>
+                            <p class="mt-3">Lorem ipsum dolor sit amet, consectetur adipiscing elit. Ut elit tellus, luctus nec ullamcorper mattis.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4 mb-4" data-aos="zoom-in" data-aos-duration="800">
+                    <div class="card h-100 border-0">
+                        <div class="card-body text-center p-4">
+                            <span class="service-title">Service Four</span>
+                            <p class="mt-3">Lorem ipsum dolor sit amet, consectetur adipiscing elit. Ut elit tellus, luctus nec ullamcorper mattis.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4 mb-4" data-aos="zoom-in" data-aos-duration="800">
+                    <div class="card h-100 border-0">
+                        <div class="card-body text-center p-4">
+                            <span class="service-title">Service Five</span>
+                            <p class="mt-3">Lorem ipsum dolor sit amet, consectetur adipiscing elit. Ut elit tellus, luctus nec ullamcorper mattis.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Contact Section with Rearranged Form Layout -->
+    <section id="contact" class="section bg-light">
+        <div class="overlay">
+            <div class="container">
+                <div class="row">
+                    <div class="col-12 text-center mb-5" data-aos="fade-up">
+                        <h2 class="display-5 fw-bold">Contact Us</h2>
+                        <p class="lead">Get in touch with our team for any inquiries</p>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-8 mx-auto" data-aos="fade-up" data-aos-duration="1000">
+                        <div class="contact-form">
+                            <form method="post" action="">
+                                {% csrf_token %}
+                                <div class="row">
+                                    <!-- Left Column: Name, Email, Subject -->
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <input type="text" class="form-control" id="name" name="name" placeholder="Name">
+                                        </div>
+                                        <div class="mb-3">
+                                            <input type="email" class="form-control" id="email" name="email" placeholder="Email">
+                                        </div>
+                                        <div class="mb-3 d-flex">
+                                            <input type="text" class="form-control" id="subject" name="subject" placeholder="Subject">
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Right Column: Message textarea and Submit button -->
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <textarea class="form-control h-100" id="message" name="message" placeholder="Type your message here..."></textarea>
+                                        </div>
+                                        <div class="mb-3">
+                                            <button type="submit" class="submit-btn">Submit</button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row mt-4">
+                                    <div class="col-12">
+                                        <p class="contact-text">
+                                            By submitting this form, you agree to our privacy policy and terms of service.
+                                        </p>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="custom-footer">
+        <div class="container">
+            <div class="text-center">
+                <p>&copy; 2025 Powered By WhiteCanvasPR</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Bootstrap JS Bundle with Popper -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script>
+    <!-- AOS Animation Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.js"></script>
+    <!-- Font Awesome Icons -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/js/all.min.js"></script>
+    <!-- Initialize AOS -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            AOS.init();
+        });
+    </script>
+</body>
+</html>
