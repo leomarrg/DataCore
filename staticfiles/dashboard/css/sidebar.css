@@ -1,0 +1,119 @@
+/*Ubicación: dashboard/static/dashboard/css/sidebar.css*/
+
+.sidebar {
+    min-height: 100vh;
+    background-color: #343a40;
+    padding-top: 20px;
+    position: fixed;
+    left: 0;
+    width: 250px;
+    transition: all 0.3s;
+    z-index: 1000;
+}
+
+.sidebar-header {
+    padding: 20px;
+    background: #2c3136;
+}
+
+.sidebar-header h3 {
+    color: #fff;
+    margin: 0;
+    font-size: 1.4rem;
+}
+
+.departments-menu {
+    padding: 0;
+    list-style: none;
+}
+
+.departments-menu li {
+    padding: 10px 20px;
+    border-bottom: 1px solid #454d55;
+}
+
+.departments-menu li a {
+    color: #f8f9fa;
+    text-decoration: none;
+    display: block;
+    transition: all 0.3s;
+}
+
+.departments-menu li.active {
+    background: #5a6268;
+}
+
+.departments-menu li:hover a {
+    color: #007bff;
+}
+
+.content-wrapper {
+    margin-left: 250px;
+    padding: 20px;
+    transition: all 0.3s;
+}
+
+/* Para pantallas pequeñas */
+@media (max-width: 768px) {
+    .sidebar {
+        margin-left: -250px;
+    }
+    
+    .sidebar.active {
+        margin-left: 0;
+    }
+    
+    .content-wrapper {
+        margin-left: 0;
+    }
+    
+    .content-wrapper.active {
+        margin-left: 250px;
+    }
+    
+    #sidebar-toggle {
+        display: block;
+    }
+}
+
+#sidebar-toggle {
+    display: none;
+    position: fixed;
+    left: 10px;
+    top: 10px;
+    z-index: 1001;
+}
+
+/* Añadir al archivo dashboard/static/dashboard/css/sidebar.css */
+
+.departments-menu .access-level-icon {
+    margin-right: 8px;
+    opacity: 0.7;
+}
+
+.departments-menu .gerencial-icon {
+    color: #ffc107; /* Amarillo */
+}
+
+.departments-menu .admin-icon {
+    color: #17a2b8; /* Azul */
+}
+
+.departments-menu .programatico-icon {
+    color: #28a745; /* Verde */
+}
+
+.departments-menu .user-icon {
+    color: #6c757d; /* Gris */
+}
+
+/* Añadir a dashboard/static/dashboard/css/sidebar.css */
+
+.toggle-icon {
+    float: right;
+    cursor: pointer;
+}
+
+.submenu.collapsed {
+    display: none;
+}

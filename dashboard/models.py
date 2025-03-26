@@ -80,3 +80,74 @@ class SalesData(CompanyModel):
     
     def __str__(self):
         return f"{self.product} - {self.date}"
+    
+class CustomForm(CompanyModel):
+    """Definición de formulario personalizado para cada compañía"""
+    name = models.CharField(max_length=100, verbose_name="Nombre del formulario")
+    description = models.TextField(blank=True, null=True, verbose_name="Descripción")
+    code_name = models.SlugField(max_length=100, verbose_name="Código identificador")
+    is_active = models.BooleanField(default=True, verbose_name="Activo")
+    departments = models.ManyToManyField(Department, related_name="custom_forms", verbose_name="Departamentos")
+    
+    # Manager específico para filtrar por compañía
+    objects = CompanyManager()
+    
+    class Meta:
+        verbose_name = "Formulario personalizado"
+        verbose_name_plural = "Formularios personalizados"
+        unique_together = ('company', 'code_name')
+    
+    def __str__(self):
+        return f"{self.name} ({self.company.name})"
+
+class FormField(models.Model):
+    """Campo de un formulario personalizado"""
+    FIELD_TYPES = [
+        ('text', 'Texto'),
+        ('textarea', 'Área de texto'),
+        ('number', 'Número'),
+        ('decimal', 'Decimal'),
+        ('date', 'Fecha'),
+        ('select', 'Selección'),
+        ('checkbox', 'Casilla de verificación'),
+        ('radio', 'Opciones')
+    ]
+    
+    form = models.ForeignKey(CustomForm, on_delete=models.CASCADE, related_name="fields")
+    name = models.CharField(max_length=100, verbose_name="Nombre del campo")
+    field_type = models.CharField(max_length=20, choices=FIELD_TYPES, verbose_name="Tipo de campo")
+    label = models.CharField(max_length=100, verbose_name="Etiqueta")
+    placeholder = models.CharField(max_length=200, blank=True, null=True, verbose_name="Texto de ayuda")
+    help_text = models.CharField(max_length=255, blank=True, null=True, verbose_name="Texto de ayuda")
+    required = models.BooleanField(default=True, verbose_name="Obligatorio")
+    order = models.PositiveIntegerField(default=0, verbose_name="Orden")
+    default_value = models.CharField(max_length=255, blank=True, null=True, verbose_name="Valor predeterminado")
+    options = models.JSONField(blank=True, null=True, verbose_name="Opciones (para select, radio)")
+    
+    class Meta:
+        verbose_name = "Campo de formulario"
+        verbose_name_plural = "Campos de formulario"
+        ordering = ['order']
+    
+    def __str__(self):
+        return f"{self.label} ({self.field_type})"
+
+class FormData(CompanyModel):
+    """Datos enviados a través de formularios personalizados"""
+    form = models.ForeignKey(CustomForm, on_delete=models.CASCADE, related_name="submissions")
+    department = models.ForeignKey(Department, on_delete=models.CASCADE, related_name="form_submissions")
+    created_by = models.ForeignKey(Employee, on_delete=models.SET_NULL, null=True, related_name="+")
+    date_created = models.DateTimeField(auto_now_add=True)
+    date_modified = models.DateTimeField(auto_now=True)
+    data = models.JSONField(verbose_name="Datos del formulario")
+    
+    # Manager específico para filtrar por compañía
+    objects = CompanyManager()
+    
+    class Meta:
+        verbose_name = "Datos de formulario"
+        verbose_name_plural = "Datos de formularios"
+        ordering = ['-date_created']
+    
+    def __str__(self):
+        return f"Datos de {self.form.name} - {self.date_created.strftime('%d/%m/%Y %H:%M')}"

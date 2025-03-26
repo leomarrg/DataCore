@@ -1,0 +1,87 @@
+<!-- dashboard/templates/dashboard/forms/form_manager.html -->
+{% extends "dashboard/base.html" %}
+
+{% block title %}Gestor de Formularios - {{ company.name }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Gestor de Formularios</h1>
+        <a href="{% url 'create_form' %}" class="btn btn-primary">
+            <i class="fas fa-plus"></i> Crear Nuevo Formulario
+        </a>
+    </div>
+    
+    {% if messages %}
+    <div class="messages mb-4">
+        {% for message in messages %}
+        <div class="alert {% if message.tags == 'error' %}alert-danger{% elif message.tags == 'success' %}alert-success{% elif message.tags == 'warning' %}alert-warning{% else %}alert-info{% endif %} alert-dismissible fade show">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    
+    <div class="card">
+        <div class="card-header bg-light">
+            <h5 class="mb-0">Formularios disponibles</h5>
+        </div>
+        <div class="card-body">
+            {% if forms %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Nombre</th>
+                            <th>Código</th>
+                            <th>Estado</th>
+                            <th>Departamentos</th>
+                            <th>Campos</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for form in forms %}
+                        <tr>
+                            <td>{{ form.name }}</td>
+                            <td><code>{{ form.code_name }}</code></td>
+                            <td>
+                                {% if form.is_active %}
+                                <span class="badge bg-success">Activo</span>
+                                {% else %}
+                                <span class="badge bg-secondary">Inactivo</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ form.departments.all|length }}</td>
+                            <td>{{ form.fields.all|length }}</td>
+                            <td>
+                                <div class="btn-group">
+                                    <a href="{% url 'edit_form' form.id %}" class="btn btn-sm btn-info">
+                                        <i class="fas fa-edit"></i> Editar
+                                    </a>
+                                    <a href="{% url 'fill_form' form.code_name %}" class="btn btn-sm btn-primary">
+                                        <i class="fas fa-file-alt"></i> Completar
+                                    </a>
+                                    <a href="{% url 'view_form_data' form.code_name %}" class="btn btn-sm btn-success">
+                                        <i class="fas fa-table"></i> Ver datos
+                                    </a>
+                                    <a href="{% url 'delete_form' form.id %}" class="btn btn-sm btn-danger">
+                                        <i class="fas fa-trash"></i> Eliminar
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="alert alert-info">
+                No hay formularios creados aún. <a href="{% url 'create_form' %}">Crea tu primer formulario</a>.
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

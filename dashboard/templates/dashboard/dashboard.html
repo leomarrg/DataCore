@@ -1,4 +1,5 @@
 <!-- dashboard/templates/dashboard/dashboard.html -->
+{% extends "dashboard/base.html" %}
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -28,24 +29,6 @@
                     <li class="nav-item">
                         <a class="nav-link active" href="{% url 'company_dashboard' %}">Dashboard</a>
                     </li>
-                    
-                    {% if visible_departments|length > 1 %}
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" id="navbarDepartmentDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            Departamentos
-                        </a>
-                        <ul class="dropdown-menu" aria-labelledby="navbarDepartmentDropdown">
-                            {% for dept in visible_departments %}
-                            <li>
-                                <a class="dropdown-item {% if dept.id == selected_department.id %}active{% endif %}" 
-                                   href="{% url 'company_dashboard' %}?department={{ dept.id }}">
-                                    {{ dept.name }}
-                                </a>
-                            </li>
-                            {% endfor %}
-                        </ul>
-                    </li>
-                    {% endif %}
                     
                     <!-- Otros elementos del menú que ya tengas -->
                 </ul>
@@ -152,6 +135,24 @@
             </div>
             {% endfor %}
         </div>
+
+        {% if employee.department.access_level == 'gerencial' or employee.department.access_level == 'admin' or user.is_superuser %}
+        <div class="row mt-4 mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">Administración de Formularios</h5>
+                    </div>
+                    <div class="card-body">
+                        <p>Crea y gestiona formularios personalizados para tu compañía.</p>
+                        <a href="{% url 'form_manager' %}" class="btn btn-primary">
+                            <i class="fas fa-cogs"></i> Gestionar Formularios
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
 
         <div class="container mt-5">
             <div class="row justify-content-center">

@@ -1,0 +1,478 @@
+<!-- dashboard/templates/dashboard/forms/create_edit_form.html -->
+{% extends "dashboard/base.html" %}
+
+{% block title %}{{ is_new|yesno:"Crear,Editar" }} Formulario - {{ company.name }}{% endblock %}
+
+{% block extra_head %}
+<style>
+    .field-row {
+        background-color: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 0.25rem;
+        padding: 15px;
+        margin-bottom: 15px;
+    }
+    .field-row .handle {
+        cursor: move;
+        color: #6c757d;
+    }
+    .field-options {
+        display: none;
+    }
+    .field-row.show-options .field-options {
+        display: block;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>{{ is_new|yesno:"Crear,Editar" }} Formulario</h1>
+        <a href="{% url 'form_manager' %}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Volver al gestor
+        </a>
+    </div>
+    
+    {% if messages %}
+    <div class="messages mb-4">
+        {% for message in messages %}
+        <div class="alert {% if message.tags == 'error' %}alert-danger{% elif message.tags == 'success' %}alert-success{% elif message.tags == 'warning' %}alert-warning{% else %}alert-info{% endif %} alert-dismissible fade show">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    
+    <form method="post" id="formBuilder">
+        {% csrf_token %}
+        
+        <div class="card mb-4">
+            <div class="card-header bg-light">
+                <h5 class="mb-0">Información del formulario</h5>
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="name" class="form-label">Nombre del formulario*</label>
+                            <input type="text" class="form-control" id="name" name="name" value="{{ custom_form.name }}" required>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="code_name" class="form-label">Código identificador*</label>
+                            <input type="text" class="form-control" id="code_name" name="code_name" value="{{ custom_form.code_name }}" required>
+                            <small class="form-text text-muted">Este código se usará en la URL del formulario. Solo letras, números y guiones.</small>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-group mb-3">
+                    <label for="description" class="form-label">Descripción</label>
+                    <textarea class="form-control" id="description" name="description" rows="3">{{ custom_form.description }}</textarea>
+                </div>
+                
+                <div class="form-check mb-3">
+                    <input class="form-check-input" type="checkbox" id="is_active" name="is_active" {% if custom_form.is_active %}checked{% endif %}>
+                    <label class="form-check-label" for="is_active">
+                        Formulario activo
+                    </label>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card mb-4">
+            <div class="card-header bg-light">
+                <h5 class="mb-0">Departamentos con acceso</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    {% for dept in available_departments %}
+                    <div class="col-md-4 mb-2">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="dept_{{ dept.id }}" name="departments" value="{{ dept.id }}" 
+                                {% if dept in selected_departments %}checked{% endif %}>
+                            <label class="form-check-label" for="dept_{{ dept.id }}">
+                                {{ dept.name }}
+                            </label>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Campos del formulario</h5>
+                <button type="button" class="btn btn-sm btn-success" id="addFieldBtn">
+                    <i class="fas fa-plus"></i> Añadir campo
+                </button>
+            </div>
+            <div class="card-body">
+                <div id="fieldsContainer">
+                    {% if not is_new %}
+                    {% for field in custom_form.fields.all %}
+                    <div class="field-row" data-field-id="{{ field.id }}">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <div>
+                                <span class="handle me-2"><i class="fas fa-grip-vertical"></i></span>
+                                <strong>{{ field.label }}</strong> ({{ field.get_field_type_display }})
+                            </div>
+                            <div>
+                                <button type="button" class="btn btn-sm btn-info toggle-options-btn">
+                                    <i class="fas fa-cog"></i> Opciones
+                                </button>
+                                <button type="button" class="btn btn-sm btn-danger remove-field-btn">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="field-options">
+                            <input type="hidden" name="field_ids" value="{{ field.id }}">
+                            
+                            <div class="row mb-3">
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label class="form-label">Nombre del campo*</label>
+                                        <input type="text" class="form-control" name="field_names" value="{{ field.name }}" required>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label class="form-label">Etiqueta*</label>
+                                        <input type="text" class="form-control" name="field_labels" value="{{ field.label }}" required>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label class="form-label">Tipo de campo*</label>
+                                        <select class="form-select" name="field_types" required>
+                                            {% for value, label in field.FIELD_TYPES %}
+                                            <option value="{{ value }}" {% if value == field.field_type %}selected{% endif %}>{{ label }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="row mb-3">
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label class="form-label">Placeholder</label>
+                                        <input type="text" class="form-control" name="field_placeholders" value="{{ field.placeholder|default:'' }}">
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label class="form-label">Texto de ayuda</label>
+                                        <input type="text" class="form-control" name="field_help_texts" value="{{ field.help_text|default:'' }}">
+                                    </div>
+                                </div>
+                                <div class="col-md-2">
+                                    <div class="form-group">
+                                        <label class="form-label">Orden</label>
+                                        <input type="number" class="form-control" name="field_orders" value="{{ field.order }}" min="0">
+                                    </div>
+                                </div>
+                                <div class="col-md-2">
+                                    <div class="form-check mt-4">
+                                        <input class="form-check-input" type="checkbox" name="field_required" {% if field.required %}checked{% endif %}>
+                                        <label class="form-check-label">
+                                            Obligatorio
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label class="form-label">Valor predeterminado</label>
+                                        <input type="text" class="form-control" name="field_defaults" value="{{ field.default_value|default:'' }}">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label class="form-label">Opciones (para select, radio, checkbox)</label>
+                                        <input type="text" class="form-control" name="field_options" value="{% for key, value in field.options.items %}{{ value }}{% if not forloop.last %},{% endif %}{% endfor %}">
+                                        <small class="form-text text-muted">Separa las opciones con comas</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                    {% endif %}
+                </div>
+                
+                {% if not custom_form.fields.all %}
+                <div class="alert alert-info" id="noFieldsMessage">
+                    No hay campos definidos. Haz clic en "Añadir campo" para comenzar.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="mt-4 d-flex justify-content-between">
+            <a href="{% url 'form_manager' %}" class="btn btn-secondary">Cancelar</a>
+            <button type="submit" class="btn btn-primary">Guardar formulario</button>
+        </div>
+    </form>
+</div>
+
+<!-- Plantilla para nuevos campos -->
+<template id="fieldTemplate">
+    <div class="field-row">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <div>
+                <span class="handle me-2"><i class="fas fa-grip-vertical"></i></span>
+                <strong class="field-title">Nuevo campo</strong>
+            </div>
+            <div>
+                <button type="button" class="btn btn-sm btn-info toggle-options-btn">
+                    <i class="fas fa-cog"></i> Opciones
+                </button>
+                <button type="button" class="btn btn-sm btn-danger remove-field-btn">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+        </div>
+        
+        <div class="field-options">
+            <input type="hidden" name="field_ids" value="">
+            
+            <div class="row mb-3">
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label class="form-label">Nombre del campo*</label>
+                        <input type="text" class="form-control field-name" name="field_names" required>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label class="form-label">Etiqueta*</label>
+                        <input type="text" class="form-control field-label" name="field_labels" required>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label class="form-label">Tipo de campo*</label>
+                        <select class="form-select field-type" name="field_types" required>
+                            <option value="text">Texto</option>
+                            <option value="textarea">Área de texto</option>
+                            <option value="number">Número</option>
+                            <option value="decimal">Decimal</option>
+                            <option value="date">Fecha</option>
+                            <option value="select">Selección</option>
+                            <option value="checkbox">Casilla de verificación</option>
+                            <option value="radio">Opciones</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row mb-3">
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label class="form-label">Placeholder</label>
+                        <input type="text" class="form-control" name="field_placeholders">
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label class="form-label">Texto de ayuda</label>
+                        <input type="text" class="form-control" name="field_help_texts">
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="form-group">
+                        <label class="form-label">Orden</label>
+                        <input type="number" class="form-control" name="field_orders" value="0" min="0">
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="form-check mt-4">
+                        <input class="form-check-input" type="checkbox" name="field_required" checked>
+                        <label class="form-check-label">
+                            Obligatorio
+                        </label>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label class="form-label">Valor predeterminado</label>
+                        <input type="text" class="form-control" name="field_defaults">
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label class="form-label">Opciones (para select, radio, checkbox)</label>
+                        <input type="text" class="form-control" name="field_options">
+                        <small class="form-text text-muted">Separa las opciones con comas</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</template>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.14.0/Sortable.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const fieldsContainer = document.getElementById('fieldsContainer');
+        const addFieldBtn = document.getElementById('addFieldBtn');
+        const fieldTemplate = document.getElementById('fieldTemplate');
+        const noFieldsMessage = document.getElementById('noFieldsMessage');
+        
+        // Inicializar Sortable para arrastrar y ordenar campos
+        new Sortable(fieldsContainer, {
+            animation: 150,
+            handle: '.handle',
+            onEnd: function() {
+                // Actualizar el orden de los campos
+                updateFieldsOrder();
+            }
+        });
+        
+        // Función para agregar un nuevo campo
+        addFieldBtn.addEventListener('click', function() {
+            // Clonar la plantilla
+            const newField = document.importNode(fieldTemplate.content, true);
+            
+            // Generar un ID único para el campo
+            const fieldId = 'new_' + Date.now();
+            newField.querySelector('.field-row').setAttribute('data-field-id', fieldId);
+            
+            // Agregar el nuevo campo al contenedor
+            fieldsContainer.appendChild(newField);
+            
+            // Ocultar el mensaje de "no hay campos"
+            if (noFieldsMessage) {
+                noFieldsMessage.style.display = 'none';
+            }
+            
+            // Mostrar opciones del nuevo campo
+            const fieldRow = fieldsContainer.lastElementChild;
+            fieldRow.classList.add('show-options');
+            
+            // Inicializar eventos para el nuevo campo
+            initFieldEvents(fieldRow);
+        });
+        
+        // Inicializar eventos para campos existentes
+        document.querySelectorAll('.field-row').forEach(function(fieldRow) {
+            initFieldEvents(fieldRow);
+        });
+        
+        // Función para inicializar eventos de un campo
+        function initFieldEvents(fieldRow) {
+            // Botón para mostrar/ocultar opciones
+            const toggleBtn = fieldRow.querySelector('.toggle-options-btn');
+            toggleBtn.addEventListener('click', function() {
+                fieldRow.classList.toggle('show-options');
+            });
+            
+            // Botón para eliminar campo
+            const removeBtn = fieldRow.querySelector('.remove-field-btn');
+            removeBtn.addEventListener('click', function() {
+                if (confirm('¿Estás seguro de eliminar este campo?')) {
+                    fieldRow.remove();
+                    
+                    // Mostrar mensaje si no hay campos
+                    if (fieldsContainer.children.length === 0 && noFieldsMessage) {
+                        noFieldsMessage.style.display = 'block';
+                    }
+                }
+            });
+            
+            // Actualizar título al cambiar la etiqueta
+            const labelInput = fieldRow.querySelector('input[name="field_labels"]');
+            const fieldTitle = fieldRow.querySelector('.field-title');
+            
+            if (labelInput && fieldTitle) {
+                labelInput.addEventListener('input', function() {
+                    fieldTitle.textContent = this.value || 'Sin etiqueta';
+                });
+            }
+            
+            // Actualizar display del tipo de campo
+            const typeSelect = fieldRow.querySelector('select[name="field_types"]');
+            if (typeSelect) {
+                typeSelect.addEventListener('change', function() {
+                    const selectedOption = this.options[this.selectedIndex];
+                    const fieldTypeDisplay = fieldRow.querySelector('.field-type-display');
+                    if (fieldTypeDisplay) {
+                        fieldTypeDisplay.textContent = `(${selectedOption.text})`;
+                    }
+                });
+            }
+        }
+        
+        // Función para actualizar el orden de los campos
+        function updateFieldsOrder() {
+            const fields = fieldsContainer.querySelectorAll('.field-row');
+            fields.forEach(function(field, index) {
+                const orderInput = field.querySelector('input[name="field_orders"]');
+                if (orderInput) {
+                    orderInput.value = index;
+                }
+            });
+        }
+        
+        // Validar formulario antes de enviar
+        document.getElementById('formBuilder').addEventListener('submit', function(e) {
+            // Validar nombre del formulario
+            const formName = document.getElementById('name').value.trim();
+            if (!formName) {
+                e.preventDefault();
+                alert('El nombre del formulario es obligatorio');
+                return;
+            }
+            
+            // Validar código del formulario
+            const codeName = document.getElementById('code_name').value.trim();
+            if (!codeName) {
+                e.preventDefault();
+                alert('El código identificador es obligatorio');
+                return;
+            }
+            
+            // Validar que el código solo contenga letras, números y guiones
+            const codeNameRegex = /^[a-z0-9\-]+$/;
+            if (!codeNameRegex.test(codeName)) {
+                e.preventDefault();
+                alert('El código identificador solo puede contener letras minúsculas, números y guiones');
+                return;
+            }
+            
+            // Validar que haya al menos un departamento seleccionado
+            const departments = document.querySelectorAll('input[name="departments"]:checked');
+            if (departments.length === 0) {
+                e.preventDefault();
+                alert('Debes seleccionar al menos un departamento con acceso al formulario');
+                return;
+            }
+            
+            // Validar que haya al menos un campo
+            const fields = fieldsContainer.querySelectorAll('.field-row');
+            if (fields.length === 0) {
+                e.preventDefault();
+                alert('Debes agregar al menos un campo al formulario');
+                return;
+            }
+            
+            // Actualizar el orden de los campos antes de enviar
+            updateFieldsOrder();
+        });
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,64 @@
+<!-- dashboard/templates/dashboard/forms/list_forms.html -->
+{% extends "dashboard/base.html" %}
+
+{% block title %}Formularios Disponibles - {{ company.name }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Formularios Disponibles</h1>
+        {% if employee.department.access_level == 'gerencial' or employee.department.access_level == 'admin' or user.is_superuser %}
+        <a href="{% url 'form_manager' %}" class="btn btn-primary">
+            <i class="fas fa-cogs"></i> Gestionar Formularios
+        </a>
+        {% endif %}
+    </div>
+    
+    {% if messages %}
+    <div class="messages mb-4">
+        {% for message in messages %}
+        <div class="alert {% if message.tags == 'error' %}alert-danger{% elif message.tags == 'success' %}alert-success{% elif message.tags == 'warning' %}alert-warning{% else %}alert-info{% endif %} alert-dismissible fade show">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    
+    <div class="row">
+        {% if forms %}
+            {% for form in forms %}
+            <div class="col-md-4 mb-4">
+                <div class="card h-100">
+                    <div class="card-header {% if form.is_active %}bg-success{% else %}bg-secondary{% endif %} text-white">
+                        <h5 class="mb-0">{{ form.name }}</h5>
+                    </div>
+                    <div class="card-body">
+                        {% if form.description %}
+                        <p>{{ form.description }}</p>
+                        {% else %}
+                        <p class="text-muted">Sin descripción</p>
+                        {% endif %}
+                        
+                        <div class="mt-auto pt-3">
+                            <a href="{% url 'fill_form' form.code_name %}" class="btn btn-primary w-100 mb-2">
+                                <i class="fas fa-file-alt"></i> Completar Formulario
+                            </a>
+                            <a href="{% url 'view_form_data' form.code_name %}" class="btn btn-info w-100">
+                                <i class="fas fa-table"></i> Ver Datos
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+        <div class="col-12">
+            <div class="alert alert-info">
+                No hay formularios disponibles para ti. {% if employee.department.access_level == 'gerencial' or employee.department.access_level == 'admin' %}Puedes <a href="{% url 'create_form' %}">crear un nuevo formulario</a>.{% endif %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
