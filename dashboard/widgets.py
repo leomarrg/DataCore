@@ -22,9 +22,9 @@ def get_widget_data(request, widget_code, config):
             user_dept = employee.department
             has_access = False
             
-            if request.user.is_superuser or user_dept.access_level == 'admin':
+            if request.user.is_superuser or user_dept.access_level == 'gerencial':
                 has_access = True
-            elif user_dept.access_level == 'manager':
+            elif user_dept.access_level in ['admin', 'programatico']:
                 child_depts = user_dept.get_all_child_departments()
                 has_access = department in child_depts
             else:
@@ -60,10 +60,10 @@ def get_departments_summary(company, department, config):
     from autenticacion.models import Employee
     try:
         # Determinar departamentos a incluir
-        if department.access_level in ['admin', 'manager'] or request.user.is_superuser:
-            if department.access_level == 'admin' or request.user.is_superuser:
+        if department.access_level in ['gerencial', 'admin', 'programatico'] or request.user.is_superuser:
+            if department.access_level == 'gerencial' or request.user.is_superuser:
                 departments = Department.objects.filter(company=company)
-            else:
+            else:  # admin o programatico
                 departments = department.get_all_child_departments()
             
             # Recopilar datos resumidos para cada departamento

@@ -102,10 +102,11 @@
                     <div class="card-body">
                         <p><strong>Departamento actual:</strong> {{ selected_department.name }}</p>
                         <p><strong>Nivel de acceso:</strong> 
-                        {% if selected_department.access_level == 'admin' %}Administrador
-                        {% elif selected_department.access_level == 'manager' %}Gerencial
-                        {% else %}Usuario Regular{% endif %}
-                        </p>
+                            {% if selected_department.access_level == 'gerencial' %}Gerencial
+                            {% elif selected_department.access_level == 'admin' %}Administrador
+                            {% elif selected_department.access_level == 'programatico' %}Programático
+                            {% else %}Usuario Regular{% endif %}
+                            </p>
                         <p><strong>Empleados:</strong> {{ selected_department.employees.count }}</p>
                     </div>
                 </div>

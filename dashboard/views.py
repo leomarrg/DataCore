@@ -104,11 +104,11 @@ def company_dashboard(request):
     
     # Determinar departamentos visibles según nivel de acceso
     visible_departments = []
-    if request.user.is_superuser or department.access_level == 'admin':
-        # Administradores ven todos los departamentos
+    if request.user.is_superuser or department.access_level == 'gerencial':
+        # Gerencial ve todos los departamentos
         visible_departments = list(Department.objects.filter(company=company))
-    elif department.access_level == 'manager':
-        # Gerentes ven su departamento y todos los que están debajo
+    elif department.access_level in ['admin', 'programatico']:
+        # Administrador y Programático ven sus departamentos subordinados
         visible_departments = department.get_all_child_departments()
     else:
         # Usuarios regulares solo ven su departamento

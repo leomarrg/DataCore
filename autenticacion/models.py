@@ -18,8 +18,9 @@ class Department(models.Model):
     company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name="departments")
     name = models.CharField(max_length=100)
     access_level = models.CharField(max_length=50, choices=[
+        ('gerencial', 'Gerencial'),
         ('admin', 'Administrador'),
-        ('manager', 'Gerente'),
+        ('programatico', 'Programático'),
         ('user', 'Usuario Regular'),
     ])
 
