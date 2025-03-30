@@ -16,8 +16,20 @@ def login_view(request):
             if user is not None:
                 login(request, user)
                 
-                # Redirigir según tipo de usuario
-                if hasattr(user, 'employee'):
+                # Special handling for superusers
+                if user.is_superuser:
+                    # Even if they don't have an employee account, allow login
+                    if hasattr(user, 'employee'):
+                        # If they do have an employee association, check company is active
+                        if not user.employee.company.is_active:
+                            logout(request)
+                            messages.error(request, "Tu compañía está desactivada")
+                            return redirect('login')
+                    # Redirect superusers to admin or dashboard
+                    return redirect('admin_dashboard')  # or any other suitable dashboard
+                
+                # For regular users, continue with existing checks
+                elif hasattr(user, 'employee'):
                     # Verificar compañía activa
                     if not user.employee.company.is_active:
                         logout(request)
@@ -25,8 +37,6 @@ def login_view(request):
                         return redirect('login')
                     
                     return redirect('company_dashboard')
-                elif user.is_staff:
-                    return redirect('admin:index')
                 else:
                     messages.warning(request, "Tu usuario no está asociado a ninguna compañía")
             else:
