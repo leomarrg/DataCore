@@ -99,6 +99,22 @@ class CustomForm(CompanyModel):
     
     def __str__(self):
         return f"{self.name} ({self.company.name})"
+    
+class FormFieldGroup(models.Model):
+    """Grupo para agrupar campos relacionados en un formulario"""
+    form = models.ForeignKey(CustomForm, on_delete=models.CASCADE, related_name="field_groups")
+    name = models.CharField(max_length=100, verbose_name="Nombre del grupo")
+    description = models.TextField(blank=True, null=True, verbose_name="Descripción")
+    order = models.PositiveIntegerField(default=0, verbose_name="Orden")
+    is_collapsed = models.BooleanField(default=True, verbose_name="Mostrar colapsado por defecto")
+    
+    class Meta:
+        verbose_name = "Grupo de campos"
+        verbose_name_plural = "Grupos de campos"
+        ordering = ['order']
+    
+    def __str__(self):
+        return f"{self.name} ({self.form.name})"
 
 class FormField(models.Model):
     """Campo de un formulario personalizado"""
@@ -114,6 +130,8 @@ class FormField(models.Model):
     ]
     
     form = models.ForeignKey(CustomForm, on_delete=models.CASCADE, related_name="fields")
+    group = models.ForeignKey(FormFieldGroup, on_delete=models.SET_NULL, null=True, blank=True, 
+                             related_name="fields", verbose_name="Grupo de campos")
     name = models.CharField(max_length=100, verbose_name="Nombre del campo")
     field_type = models.CharField(max_length=20, choices=FIELD_TYPES, verbose_name="Tipo de campo")
     label = models.CharField(max_length=100, verbose_name="Etiqueta")
@@ -127,7 +145,7 @@ class FormField(models.Model):
     class Meta:
         verbose_name = "Campo de formulario"
         verbose_name_plural = "Campos de formulario"
-        ordering = ['order']
+        ordering = ['group__order', 'group', 'order']
     
     def __str__(self):
         return f"{self.label} ({self.field_type})"
@@ -151,3 +169,118 @@ class FormData(CompanyModel):
     
     def __str__(self):
         return f"Datos de {self.form.name} - {self.date_created.strftime('%d/%m/%Y %H:%M')}"
+
+# dashboard/models.py - Añadir al final del archivo
+
+class CompanyTheme(models.Model):
+    """Almacena estilos personalizados y configuraciones para cada compañía"""
+    company = models.OneToOneField(Company, on_delete=models.CASCADE, related_name="theme")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    # Colores primarios
+    primary_color = models.CharField(max_length=20, default="#56b3c7", verbose_name="Color primario")
+    secondary_color = models.CharField(max_length=20, default="#8fc73e", verbose_name="Color secundario")
+    accent_color = models.CharField(max_length=20, default="#FF9613", verbose_name="Color de acento")
+    
+    # Colores de texto
+    text_color = models.CharField(max_length=20, default="#333333", verbose_name="Color de texto principal")
+    light_text_color = models.CharField(max_length=20, default="#ffffff", verbose_name="Color de texto claro")
+    
+    # Fuentes
+    font_family = models.CharField(max_length=100, default="'Montserrat', sans-serif", verbose_name="Familia de fuentes")
+    
+    # Logo
+    logo = models.ImageField(upload_to='company_logos/', null=True, blank=True, verbose_name="Logo de la compañía")
+    logo_small = models.ImageField(upload_to='company_logos/', null=True, blank=True, verbose_name="Logo pequeño/icono")
+    
+    # Fondo personalizado
+    background_image = models.ImageField(upload_to='company_backgrounds/', null=True, blank=True, verbose_name="Imagen de fondo")
+    
+    # CSS personalizado
+    custom_css = models.TextField(blank=True, null=True, verbose_name="CSS personalizado")
+    
+    # JavaScript personalizado
+    custom_js = models.TextField(blank=True, null=True, verbose_name="JavaScript personalizado")
+    
+    # Habilitado/Deshabilitado
+    enabled = models.BooleanField(default=True, verbose_name="Tema habilitado")
+    
+    class Meta:
+        verbose_name = "Tema de compañía"
+        verbose_name_plural = "Temas de compañías"
+    
+    def __str__(self):
+        return f"Tema de {self.company.name}"
+    
+    def get_css_variables(self):
+        """Devuelve las variables CSS para este tema"""
+        return f"""
+        :root {{
+            --primary-color: {self.primary_color};
+            --secondary-color: {self.secondary_color};
+            --accent-color: {self.accent_color};
+            --text-color: {self.text_color};
+            --light-text-color: {self.light_text_color};
+            --font-family: {self.font_family};
+        }}
+        """
+    
+    def get_compiled_css(self):
+        """Combina las variables CSS con el CSS personalizado"""
+        css = self.get_css_variables()
+        
+        # Añadir estilos base aplicando variables
+        css += """
+        body {
+            font-family: var(--font-family);
+            color: var(--text-color);
+        }
+        
+        .navbar {
+            background-color: var(--primary-color) !important;
+        }
+        
+        .btn-primary {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+        
+        .btn-primary:hover {
+            background-color: color-mix(in srgb, var(--primary-color) 80%, black);
+            border-color: color-mix(in srgb, var(--primary-color) 80%, black);
+        }
+        
+        .btn-secondary {
+            background-color: var(--secondary-color);
+            border-color: var(--secondary-color);
+        }
+        
+        .btn-secondary:hover {
+            background-color: color-mix(in srgb, var(--secondary-color) 80%, black);
+            border-color: color-mix(in srgb, var(--secondary-color) 80%, black);
+        }
+        
+        .card-header {
+            background-color: color-mix(in srgb, var(--primary-color) 30%, white) !important;
+        }
+        
+        /* Estilos personalizados para formularios */
+        .form-control:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 0.25rem rgba(var(--primary-color), 0.25);
+        }
+        """
+        
+        # Añadir CSS personalizado si existe
+        if self.custom_css:
+            css += "\n/* CSS personalizado */\n"
+            css += self.custom_css
+        
+        return css
+    
+    @staticmethod
+    def get_default_theme(company):
+        """Obtiene el tema para una compañía, o crea uno por defecto si no existe"""
+        theme, created = CompanyTheme.objects.get_or_create(company=company)
+        return theme

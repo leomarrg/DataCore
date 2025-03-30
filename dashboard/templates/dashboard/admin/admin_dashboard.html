@@ -1,0 +1,371 @@
+<!-- dashboard/templates/dashboard/admin/admin_dashboard.html -->
+{% extends "dashboard/base.html" %}
+
+{% block title %}Dashboard de Administrador{% endblock %}
+
+{% block extra_head %}
+<style>
+    .stats-card {
+        border-left: 4px solid;
+        transition: all 0.3s ease;
+    }
+    
+    .stats-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+    }
+    
+    .stats-card.primary {
+        border-left-color: var(--primary-color);
+    }
+    
+    .stats-card.secondary {
+        border-left-color: var(--secondary-color);
+    }
+    
+    .stats-card.success {
+        border-left-color: #28a745;
+    }
+    
+    .stats-card.info {
+        border-left-color: #17a2b8;
+    }
+    
+    .stats-card.warning {
+        border-left-color: #ffc107;
+    }
+    
+    .stats-card.danger {
+        border-left-color: #dc3545;
+    }
+    
+    .stats-card .icon {
+        font-size: 2.5rem;
+        opacity: 0.7;
+    }
+    
+    .stats-card .card-title {
+        font-size: 1rem;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+    }
+    
+    .stats-card .card-value {
+        font-size: 2rem;
+        font-weight: 700;
+    }
+    
+    .recent-activity-item {
+        padding: 10px 0;
+        border-bottom: 1px solid #eee;
+    }
+    
+    .recent-activity-item:last-child {
+        border-bottom: none;
+    }
+    
+    .admin-dashboard-card {
+        margin-bottom: 20px;
+        transition: all 0.3s ease;
+    }
+    
+    .admin-dashboard-card:hover {
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    }
+    
+    .badge-count {
+        font-size: 0.9rem;
+        padding: 0.3rem 0.6rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Dashboard de Administrador</h1>
+        <div>
+            <a href="{% url 'admin:index' %}" class="btn btn-secondary me-2">
+                <i class="fas fa-cogs"></i> Admin Django
+            </a>
+            <a href="{% url 'company_dashboard' %}" class="btn btn-primary">
+                <i class="fas fa-building"></i> Dashboard Normal
+            </a>
+        </div>
+    </div>
+    
+    <!-- Tarjetas de estadísticas principales -->
+    <div class="row mb-4">
+        <div class="col-xl-2 col-md-4 mb-4">
+            <div class="card stats-card primary">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="card-title text-muted">Total Compañías</div>
+                            <div class="card-value">{{ total_companies }}</div>
+                        </div>
+                        <div class="icon">
+                            <i class="fas fa-building"></i>
+                        </div>
+                    </div>
+                    <small class="text-success">
+                        <i class="fas fa-circle"></i> {{ active_companies }} activas
+                    </small>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-xl-2 col-md-4 mb-4">
+            <div class="card stats-card secondary">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="card-title text-muted">Departamentos</div>
+                            <div class="card-value">{{ total_departments }}</div>
+                        </div>
+                        <div class="icon">
+                            <i class="fas fa-sitemap"></i>
+                        </div>
+                    </div>
+                    <small class="text-muted">
+                        <i class="fas fa-chart-bar"></i> Por compañía: {{ total_departments|floatformat:1|default:0 }}
+                    </small>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-xl-2 col-md-4 mb-4">
+            <div class="card stats-card success">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="card-title text-muted">Empleados</div>
+                            <div class="card-value">{{ total_employees }}</div>
+                        </div>
+                        <div class="icon">
+                            <i class="fas fa-users"></i>
+                        </div>
+                    </div>
+                    <small class="text-muted">
+                        <i class="fas fa-chart-line"></i> Total usuarios del sistema
+                    </small>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-xl-2 col-md-4 mb-4">
+            <div class="card stats-card info">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="card-title text-muted">Formularios</div>
+                            <div class="card-value">{{ total_forms }}</div>
+                        </div>
+                        <div class="icon">
+                            <i class="fas fa-file-alt"></i>
+                        </div>
+                    </div>
+                    <small class="text-muted">
+                        <i class="fas fa-list"></i> Formularios configurados
+                    </small>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-xl-2 col-md-4 mb-4">
+            <div class="card stats-card warning">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="card-title text-muted">Envíos</div>
+                            <div class="card-value">{{ total_form_submissions }}</div>
+                        </div>
+                        <div class="icon">
+                            <i class="fas fa-paper-plane"></i>
+                        </div>
+                    </div>
+                    <small class="text-muted">
+                        <i class="fas fa-clipboard-check"></i> Formularios completados
+                    </small>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-2 col-md-4 mb-4">
+            <div class="card stats-card danger">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="card-title text-muted">Promedio</div>
+                            <div class="card-value">
+                                {% if total_forms > 0 %}
+                                {{ total_form_submissions|floatformat:1|default:0 }}
+                                {% else %}
+                                0
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="icon">
+                            <i class="fas fa-chart-pie"></i>
+                        </div>
+                    </div>
+                    <small class="text-muted">
+                        <i class="fas fa-calculator"></i> Envíos por formulario
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <!-- Compañías recientes -->
+        <div class="col-md-6 col-xl-4">
+            <div class="card admin-dashboard-card">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">Compañías Recientes</h5>
+                </div>
+                <div class="card-body">
+                    <div class="list-group">
+                        {% for company in recent_companies %}
+                        <a href="{% url 'admin:autenticacion_company_change' company.id %}" class="list-group-item list-group-item-action">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h6 class="mb-1">{{ company.name }}</h6>
+                                <small>{{ company.created_at|date:"d/m/Y" }}</small>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <small class="text-muted">{{ company.departments.count }} departamentos</small>
+                                <span class="badge {% if company.is_active %}bg-success{% else %}bg-secondary{% endif %}">
+                                    {{ company.is_active|yesno:"Activa,Inactiva" }}
+                                </span>
+                            </div>
+                        </a>
+                        {% empty %}
+                        <div class="text-center py-3">
+                            <i class="fas fa-info-circle mb-2" style="font-size: 2rem; color: #6c757d;"></i>
+                            <p class="mb-0">No hay compañías registradas</p>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <a href="{% url 'admin:autenticacion_company_changelist' %}" class="btn btn-sm btn-outline-primary w-100">
+                        Ver todas las compañías
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Formularios más utilizados -->
+        <div class="col-md-6 col-xl-4">
+            <div class="card admin-dashboard-card">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">Formularios Más Utilizados</h5>
+                </div>
+                <div class="card-body">
+                    <div class="list-group">
+                        {% for form in popular_forms %}
+                        <a href="{% url 'edit_form' form.id %}" class="list-group-item list-group-item-action">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h6 class="mb-1">{{ form.name }}</h6>
+                                <span class="badge bg-primary badge-count">{{ form.submissions_count }} envíos</span>
+                            </div>
+                            <small class="text-muted">Compañía: {{ form.company.name }}</small>
+                        </a>
+                        {% empty %}
+                        <div class="text-center py-3">
+                            <i class="fas fa-info-circle mb-2" style="font-size: 2rem; color: #6c757d;"></i>
+                            <p class="mb-0">No hay formularios con envíos</p>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <a href="{% url 'form_manager' %}" class="btn btn-sm btn-outline-primary w-100">
+                        Gestionar formularios
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Compañías por número de empleados -->
+        <div class="col-md-6 col-xl-4">
+            <div class="card admin-dashboard-card">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">Compañías con Más Empleados</h5>
+                </div>
+                <div class="card-body">
+                    <div class="list-group">
+                        {% for company in companies_by_employees %}
+                        <a href="{% url 'admin:autenticacion_company_change' company.id %}" class="list-group-item list-group-item-action">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h6 class="mb-1">{{ company.name }}</h6>
+                                <span class="badge bg-success badge-count">{{ company.employees_count }} empleados</span>
+                            </div>
+                            <small class="text-muted">{{ company.departments.count }} departamentos</small>
+                        </a>
+                        {% empty %}
+                        <div class="text-center py-3">
+                            <i class="fas fa-info-circle mb-2" style="font-size: 2rem; color: #6c757d;"></i>
+                            <p class="mb-0">No hay compañías con empleados</p>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <a href="{% url 'admin:autenticacion_employee_changelist' %}" class="btn btn-sm btn-outline-primary w-100">
+                        Ver todos los empleados
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Actividad reciente -->
+        <div class="col-12">
+            <div class="card admin-dashboard-card">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">Actividad Reciente</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Fecha</th>
+                                    <th>Compañía</th>
+                                    <th>Departamento</th>
+                                    <th>Formulario</th>
+                                    <th>Usuario</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for activity in recent_activity %}
+                                <tr>
+                                    <td>{{ activity.date_created|date:"d/m/Y H:i" }}</td>
+                                    <td>{{ activity.company.name }}</td>
+                                    <td>{{ activity.department.name }}</td>
+                                    <td>{{ activity.form.name }}</td>
+                                    <td>{{ activity.created_by.user.username }}</td>
+                                    <td>
+                                        <a href="{% url 'view_form_data' activity.form.code_name %}?department={{ activity.department.id }}" class="btn btn-sm btn-outline-info">
+                                            <i class="fas fa-eye"></i> Ver
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="6" class="text-center py-3">
+                                        <i class="fas fa-info-circle mb-2" style="font-size: 1.5rem; color: #6c757d;"></i>
+                                        <p class="mb-0">No hay actividad reciente</p>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

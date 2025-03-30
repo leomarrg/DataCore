@@ -3,6 +3,34 @@
 
 {% block title %}{{ custom_form.name }} - {{ company.name }}{% endblock %}
 
+{% block extra_head %}
+<style>
+    .field-group {
+        border: 1px solid #dee2e6;
+        border-radius: 0.25rem;
+        margin-bottom: 1.5rem;
+    }
+    .field-group-header {
+        background-color: #f8f9fa;
+        padding: 0.75rem 1rem;
+        cursor: pointer;
+        border-bottom: 1px solid #dee2e6;
+    }
+    .field-group-header:hover {
+        background-color: #e9ecef;
+    }
+    .field-group-body {
+        padding: 1rem;
+    }
+    .field-group-toggle-icon {
+        transition: transform 0.3s;
+    }
+    .collapsed .field-group-toggle-icon {
+        transform: rotate(-90deg);
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="container mt-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
@@ -54,88 +82,196 @@
                         <input type="hidden" name="department" value="{{ selected_department.id }}">
                         {% endif %}
                         
+                        {% comment %} Organizar campos por grupos {% endcomment %}
+                        {% regroup form_fields by group as grouped_fields %}
+                        
+                        {% comment %} Primero mostrar campos sin grupo {% endcomment %}
                         {% for field in form_fields %}
-                        <div class="form-group mb-4">
-                            <label for="field_{{ field.id }}" class="form-label">
-                                {{ field.label }}
-                                {% if field.required %}<span class="text-danger">*</span>{% endif %}
-                            </label>
-                            
-                            {% if field.field_type == 'text' %}
-                            <input type="text" class="form-control" id="field_{{ field.id }}" name="field_{{ field.id }}"
-                                   placeholder="{{ field.placeholder }}" 
-                                   value="{{ field.default_value }}"
-                                   {% if field.required %}required{% endif %}>
-                            
-                            {% elif field.field_type == 'textarea' %}
-                            <textarea class="form-control" id="field_{{ field.id }}" name="field_{{ field.id }}" 
-                                      placeholder="{{ field.placeholder }}" rows="4"
-                                      {% if field.required %}required{% endif %}>{{ field.default_value }}</textarea>
-                            
-                            {% elif field.field_type == 'number' %}
-                            <input type="number" class="form-control" id="field_{{ field.id }}" name="field_{{ field.id }}"
-                                   placeholder="{{ field.placeholder }}" 
-                                   value="{{ field.default_value }}"
-                                   {% if field.required %}required{% endif %}>
-                            
-                            {% elif field.field_type == 'decimal' %}
-                            <input type="number" step="0.01" class="form-control" id="field_{{ field.id }}" name="field_{{ field.id }}" 
-                                   placeholder="{{ field.placeholder }}" 
-                                   value="{{ field.default_value }}"
-                                   {% if field.required %}required{% endif %}>
-                            
-                            {% elif field.field_type == 'date' %}
-                            <input type="date" class="form-control" id="field_{{ field.id }}" name="field_{{ field.id }}" 
-                                   value="{{ field.default_value }}"
-                                   {% if field.required %}required{% endif %}>
-                            
-                            {% elif field.field_type == 'select' %}
-                            <select class="form-select" id="field_{{ field.id }}" name="field_{{ field.id }}"
-                                    {% if field.required %}required{% endif %}>
-                                <option value="">Seleccionar...</option>
-                                {% for key, option in field.options.items %}
-                                <option value="{{ option }}" {% if option == field.default_value %}selected{% endif %}>{{ option }}</option>
-                                {% endfor %}
-                            </select>
-                            
-                            {% elif field.field_type == 'checkbox' %}
-                            <div>
-                                {% for key, option in field.options.items %}
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" 
-                                           id="field_{{ field.id }}_{{ key }}" 
-                                           name="field_{{ field.id }}_{{ key }}" 
-                                           value="{{ option }}"
-                                           {% if option == field.default_value %}checked{% endif %}>
-                                    <label class="form-check-label" for="field_{{ field.id }}_{{ key }}">
-                                        {{ option }}
-                                    </label>
+                            {% if not field.group %}
+                            <div class="form-group mb-4">
+                                <label for="field_{{ field.id }}" class="form-label">
+                                    {{ field.label }}
+                                    {% if field.required %}<span class="text-danger">*</span>{% endif %}
+                                </label>
+                                
+                                {% if field.field_type == 'text' %}
+                                <input type="text" class="form-control" id="field_{{ field.id }}" name="field_{{ field.id }}"
+                                       placeholder="{{ field.placeholder }}" 
+                                       value="{{ field.default_value }}"
+                                       {% if field.required %}required{% endif %}>
+                                
+                                {% elif field.field_type == 'textarea' %}
+                                <textarea class="form-control" id="field_{{ field.id }}" name="field_{{ field.id }}" 
+                                          placeholder="{{ field.placeholder }}" rows="4"
+                                          {% if field.required %}required{% endif %}>{{ field.default_value }}</textarea>
+                                
+                                {% elif field.field_type == 'number' %}
+                                <input type="number" class="form-control" id="field_{{ field.id }}" name="field_{{ field.id }}"
+                                       placeholder="{{ field.placeholder }}" 
+                                       value="{{ field.default_value }}"
+                                       {% if field.required %}required{% endif %}>
+                                
+                                {% elif field.field_type == 'decimal' %}
+                                <input type="number" step="0.01" class="form-control" id="field_{{ field.id }}" name="field_{{ field.id }}" 
+                                       placeholder="{{ field.placeholder }}" 
+                                       value="{{ field.default_value }}"
+                                       {% if field.required %}required{% endif %}>
+                                
+                                {% elif field.field_type == 'date' %}
+                                <input type="date" class="form-control" id="field_{{ field.id }}" name="field_{{ field.id }}" 
+                                       value="{{ field.default_value }}"
+                                       {% if field.required %}required{% endif %}>
+                                
+                                {% elif field.field_type == 'select' %}
+                                <select class="form-select" id="field_{{ field.id }}" name="field_{{ field.id }}"
+                                        {% if field.required %}required{% endif %}>
+                                    <option value="">Seleccionar...</option>
+                                    {% for key, option in field.options.items %}
+                                    <option value="{{ option }}" {% if option == field.default_value %}selected{% endif %}>{{ option }}</option>
+                                    {% endfor %}
+                                </select>
+                                
+                                {% elif field.field_type == 'checkbox' %}
+                                <div>
+                                    {% for key, option in field.options.items %}
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" 
+                                               id="field_{{ field.id }}_{{ key }}" 
+                                               name="field_{{ field.id }}_{{ key }}" 
+                                               value="{{ option }}"
+                                               {% if option == field.default_value %}checked{% endif %}>
+                                        <label class="form-check-label" for="field_{{ field.id }}_{{ key }}">
+                                            {{ option }}
+                                        </label>
+                                    </div>
+                                    {% endfor %}
                                 </div>
-                                {% endfor %}
-                            </div>
-                            
-                            {% elif field.field_type == 'radio' %}
-                            <div>
-                                {% for key, option in field.options.items %}
-                                <div class="form-check">
-                                    <input class="form-check-input" type="radio" 
-                                           id="field_{{ field.id }}_{{ key }}" 
-                                           name="field_{{ field.id }}" 
-                                           value="{{ option }}"
-                                           {% if option == field.default_value %}checked{% endif %}
-                                           {% if field.required %}required{% endif %}>
-                                    <label class="form-check-label" for="field_{{ field.id }}_{{ key }}">
-                                        {{ option }}
-                                    </label>
+                                
+                                {% elif field.field_type == 'radio' %}
+                                <div>
+                                    {% for key, option in field.options.items %}
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" 
+                                               id="field_{{ field.id }}_{{ key }}" 
+                                               name="field_{{ field.id }}" 
+                                               value="{{ option }}"
+                                               {% if option == field.default_value %}checked{% endif %}
+                                               {% if field.required %}required{% endif %}>
+                                        <label class="form-check-label" for="field_{{ field.id }}_{{ key }}">
+                                            {{ option }}
+                                        </label>
+                                    </div>
+                                    {% endfor %}
                                 </div>
-                                {% endfor %}
+                                {% endif %}
+                                
+                                {% if field.help_text %}
+                                <small class="form-text text-muted">{{ field.help_text }}</small>
+                                {% endif %}
                             </div>
                             {% endif %}
-                            
-                            {% if field.help_text %}
-                            <small class="form-text text-muted">{{ field.help_text }}</small>
-                            {% endif %}
-                        </div>
+                        {% endfor %}
+                        
+                        {% comment %} Luego mostrar campos agrupados {% endcomment %}
+                        {% for group in field_groups %}
+                            <div class="field-group">
+                                <div class="field-group-header d-flex justify-content-between align-items-center" 
+                                     data-bs-toggle="collapse" data-bs-target="#group{{ group.id }}">
+                                    <h5 class="mb-0">{{ group.name }}</h5>
+                                    <i class="fas fa-chevron-down field-group-toggle-icon"></i>
+                                </div>
+                                <div class="collapse {% if not group.is_collapsed %}show{% endif %}" id="group{{ group.id }}">
+                                    <div class="field-group-body">
+                                        {% if group.description %}
+                                        <p class="text-muted mb-4">{{ group.description }}</p>
+                                        {% endif %}
+                                        
+                                        {% for field in group.fields.all %}
+                                        <div class="form-group mb-4">
+                                            <label for="field_{{ field.id }}" class="form-label">
+                                                {{ field.label }}
+                                                {% if field.required %}<span class="text-danger">*</span>{% endif %}
+                                            </label>
+                                            
+                                            {% if field.field_type == 'text' %}
+                                            <input type="text" class="form-control" id="field_{{ field.id }}" name="field_{{ field.id }}"
+                                                   placeholder="{{ field.placeholder }}" 
+                                                   value="{{ field.default_value }}"
+                                                   {% if field.required %}required{% endif %}>
+                                            
+                                            {% elif field.field_type == 'textarea' %}
+                                            <textarea class="form-control" id="field_{{ field.id }}" name="field_{{ field.id }}" 
+                                                      placeholder="{{ field.placeholder }}" rows="4"
+                                                      {% if field.required %}required{% endif %}>{{ field.default_value }}</textarea>
+                                            
+                                            {% elif field.field_type == 'number' %}
+                                            <input type="number" class="form-control" id="field_{{ field.id }}" name="field_{{ field.id }}"
+                                                   placeholder="{{ field.placeholder }}" 
+                                                   value="{{ field.default_value }}"
+                                                   {% if field.required %}required{% endif %}>
+                                            
+                                            {% elif field.field_type == 'decimal' %}
+                                            <input type="number" step="0.01" class="form-control" id="field_{{ field.id }}" name="field_{{ field.id }}" 
+                                                   placeholder="{{ field.placeholder }}" 
+                                                   value="{{ field.default_value }}"
+                                                   {% if field.required %}required{% endif %}>
+                                            
+                                            {% elif field.field_type == 'date' %}
+                                            <input type="date" class="form-control" id="field_{{ field.id }}" name="field_{{ field.id }}" 
+                                                   value="{{ field.default_value }}"
+                                                   {% if field.required %}required{% endif %}>
+                                            
+                                            {% elif field.field_type == 'select' %}
+                                            <select class="form-select" id="field_{{ field.id }}" name="field_{{ field.id }}"
+                                                    {% if field.required %}required{% endif %}>
+                                                <option value="">Seleccionar...</option>
+                                                {% for key, option in field.options.items %}
+                                                <option value="{{ option }}" {% if option == field.default_value %}selected{% endif %}>{{ option }}</option>
+                                                {% endfor %}
+                                            </select>
+                                            
+                                            {% elif field.field_type == 'checkbox' %}
+                                            <div>
+                                                {% for key, option in field.options.items %}
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" 
+                                                           id="field_{{ field.id }}_{{ key }}" 
+                                                           name="field_{{ field.id }}_{{ key }}" 
+                                                           value="{{ option }}"
+                                                           {% if option == field.default_value %}checked{% endif %}>
+                                                    <label class="form-check-label" for="field_{{ field.id }}_{{ key }}">
+                                                        {{ option }}
+                                                    </label>
+                                                </div>
+                                                {% endfor %}
+                                            </div>
+                                            
+                                            {% elif field.field_type == 'radio' %}
+                                            <div>
+                                                {% for key, option in field.options.items %}
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="radio" 
+                                                           id="field_{{ field.id }}_{{ key }}" 
+                                                           name="field_{{ field.id }}" 
+                                                           value="{{ option }}"
+                                                           {% if option == field.default_value %}checked{% endif %}
+                                                           {% if field.required %}required{% endif %}>
+                                                    <label class="form-check-label" for="field_{{ field.id }}_{{ key }}">
+                                                        {{ option }}
+                                                    </label>
+                                                </div>
+                                                {% endfor %}
+                                            </div>
+                                            {% endif %}
+                                            
+                                            {% if field.help_text %}
+                                            <small class="form-text text-muted">{{ field.help_text }}</small>
+                                            {% endif %}
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            </div>
                         {% endfor %}
                         
                         <div class="mt-4">
@@ -184,4 +320,20 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Manejar el colapsar/expandir de los grupos
+        document.querySelectorAll('.field-group-header').forEach(header => {
+            header.addEventListener('click', function() {
+                const fieldGroup = this.closest('.field-group');
+                const collapseElement = fieldGroup.querySelector('.collapse');
+                const isCollapsed = !collapseElement.classList.contains('show');
+                fieldGroup.classList.toggle('collapsed', !isCollapsed);
+            });
+        });
+    });
+</script>
 {% endblock %}

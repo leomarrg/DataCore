@@ -7,20 +7,66 @@
     <title>{% block title %}{{ company.name }} - Dashboard{% endblock %}</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    {% block extra_head %}{% endblock %}
+    
+    <!-- Fuentes personalizadas -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Estilos base -->
     <style>
+        :root {
+            /* Variables CSS por defecto (serán sobrescritas por el tema de la compañía) */
+            --primary-color: #56b3c7;
+            --secondary-color: #8fc73e;
+            --accent-color: #FF9613;
+            --text-color: #333333;
+            --light-text-color: #ffffff;
+            --font-family: 'Montserrat', sans-serif;
+        }
+        
         .widget-small { min-height: 200px; }
         .widget-medium { min-height: 300px; }
         .widget-large { min-height: 400px; }
         .dashboard-widget { margin-bottom: 20px; }
         .widget-content { padding: 15px; }
     </style>
+    
+    <!-- Estilos de tema personalizados para la compañía -->
+    {% if company_theme and company_theme.enabled %}
+    <style id="company-theme-css">
+        {{ company_theme.get_compiled_css|safe }}
+    </style>
+    
+    {% if company_theme.background_image %}
+    <style>
+        body {
+            background-image: url("{{ company_theme.background_image.url }}");
+            background-size: cover;
+            background-attachment: fixed;
+            background-position: center;
+        }
+        
+        .card {
+            background-color: rgba(255, 255, 255, 0.95);
+        }
+    </style>
+    {% endif %}
+    {% endif %}
+    
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    {% block extra_head %}{% endblock %}
 </head>
 <body>
     <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
         <div class="container">
-            <a class="navbar-brand" href="#">{{ company.name }}</a>
+            <a class="navbar-brand" href="#">
+                {% if company_theme and company_theme.enabled and company_theme.logo %}
+                <img src="{{ company_theme.logo.url }}" alt="{{ company.name }}" height="40" class="d-inline-block align-top me-2">
+                {% else %}
+                {{ company.name }}
+                {% endif %}
+            </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
             </button>
@@ -30,13 +76,13 @@
                         <a class="nav-link {% if request.path == '/dashboard/' %}active{% endif %}" href="{% url 'company_dashboard' %}">Dashboard</a>
                     </li>
                     
-                    <!-- Menú desplegable para formularios -->
+                    <!-- Menú desplegable para formularios - Ahora solo con opciones de visualización para gerenciales -->
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle {% if '/forms/' in request.path %}active{% endif %}" href="#" id="formsDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                             Formularios
                         </a>
                         <ul class="dropdown-menu" aria-labelledby="formsDropdown">
-                            {% if employee.department.access_level == 'gerencial' or employee.department.access_level == 'admin' or user.is_superuser %}
+                            {% if user.is_superuser %}
                             <li>
                                 <a class="dropdown-item {% if request.path == '/dashboard/forms/' %}active{% endif %}" href="{% url 'form_manager' %}">
                                     <i class="fas fa-cogs"></i> Gestionar formularios
@@ -50,17 +96,17 @@
                                 {% for form in available_forms %}
                                 <li>
                                     <a class="dropdown-item {% if request.path == '/dashboard/forms/'|add:form.code_name|add:'/' %}active{% endif %}" 
-                                       href="{% url 'fill_form' form.code_name %}">
+                                    href="{% url 'fill_form' form.code_name %}">
                                         <i class="fas fa-file-alt"></i> {{ form.name }}
                                     </a>
                                 </li>
+                                {% endfor %}
                                 <li>
                                     <a class="dropdown-item {% if request.path == '/dashboard/forms/list/' %}active{% endif %}" href="{% url 'list_forms' %}">
                                         <i class="fas fa-list"></i> Ver todos los formularios
                                     </a>
                                 </li>
                                 <li><hr class="dropdown-divider"></li>
-                                {% endfor %}
                             {% else %}
                             <li><a class="dropdown-item disabled" href="#">No hay formularios disponibles</a></li>
                             {% endif %}
@@ -76,7 +122,7 @@
                             {% for dept in visible_departments %}
                             <li>
                                 <a class="dropdown-item {% if dept.id == selected_department.id %}active{% endif %}" 
-                                   href="{% url 'company_dashboard' %}?department={{ dept.id }}">
+                                href="{% url 'company_dashboard' %}?department={{ dept.id }}">
                                     {{ dept.name }}
                                 </a>
                             </li>
@@ -84,8 +130,34 @@
                         </ul>
                     </li>
                     {% endif %}
+                    
+                    <!-- Menú de configuración - Solo para superusuarios -->
+                    {% if user.is_superuser %}
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="settingsDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            Configuración
+                        </a>
+                        <ul class="dropdown-menu" aria-labelledby="settingsDropdown">
+                            <li>
+                                <a class="dropdown-item" href="{% url 'company_theme' %}">
+                                    <i class="fas fa-palette"></i> Personalizar tema
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="{% url 'admin:index' %}">
+                                    <i class="fas fa-tools"></i> Administración Django
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="{% url 'admin_dashboard' %}">
+                                    <i class="fas fa-tachometer-alt"></i> Dashboard Admin
+                                </a>
+                            </li>
+                        </ul>
+                    </li>
+                    {% endif %}
                 </ul>
-                <span class="navbar-text me-3">
+                <span class="navbar-text me-3 text-light">
                     Usuario: {% if employee.user.first_name or employee.user.last_name %}{{ employee.user.first_name }} {{ employee.user.last_name }}{% else %}{{ employee.user.username }}{% endif %} | 
                     Departamento: {{ employee.department.name }}
                 </span>
@@ -97,6 +169,14 @@
     {% block content %}{% endblock %}
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- JavaScript personalizado para la compañía -->
+    {% if company_theme and company_theme.enabled and company_theme.custom_js %}
+    <script id="company-custom-js">
+        {{ company_theme.custom_js|safe }}
+    </script>
+    {% endif %}
+    
     {% block extra_js %}{% endblock %}
 </body>
 </html>

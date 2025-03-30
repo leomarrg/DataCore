@@ -7,7 +7,7 @@
 <div class="container mt-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h1>Formularios Disponibles</h1>
-        {% if employee.department.access_level == 'gerencial' or employee.department.access_level == 'admin' or user.is_superuser %}
+        {% if user.is_superuser %}
         <a href="{% url 'form_manager' %}" class="btn btn-primary">
             <i class="fas fa-cogs"></i> Gestionar Formularios
         </a>
@@ -55,7 +55,7 @@
         {% else %}
         <div class="col-12">
             <div class="alert alert-info">
-                No hay formularios disponibles para ti. {% if employee.department.access_level == 'gerencial' or employee.department.access_level == 'admin' %}Puedes <a href="{% url 'create_form' %}">crear un nuevo formulario</a>.{% endif %}
+                No hay formularios disponibles para ti. {% if user.is_superuser %}Puedes <a href="{% url 'create_form' %}">crear un nuevo formulario</a>.{% endif %}
             </div>
         </div>
         {% endif %}

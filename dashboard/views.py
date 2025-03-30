@@ -4,7 +4,7 @@ from django.contrib.auth.decorators import login_required, user_passes_test
 from django.urls import reverse
 from django.contrib import messages
 from autenticacion.models import Company, Department
-from .models import DashboardWidget, CompanyDashboard, DashboardWidgetConfig, CustomForm, FormField, FormData
+from .models import DashboardWidget, CompanyDashboard, DashboardWidgetConfig, CustomForm, FormField, FormData, CompanyTheme
 from .widgets import get_widget_data
 from .forms import DashboardConfigForm, WidgetConfigForm
 import datetime
@@ -80,6 +80,53 @@ def configure_widget(request, widget_config_id):
         'form': form
     })
 
+# Definir esta función antes de company_dashboard
+def organize_departments_hierarchy(departments):
+    """
+    Organiza los departamentos en una estructura jerárquica
+    para mostrarlos correctamente en el sidebar,
+    ordenando por nivel de acceso (de mayor a menor)
+    """
+    # Definir el orden de los niveles de acceso (de mayor a menor)
+    access_level_order = {
+        'gerencial': 1,
+        'admin': 2,
+        'programatico': 3,
+        'user': 4
+    }
+    
+    # Primero identificamos departamentos raíz (sin padre)
+    root_departments = [dept for dept in departments if not dept.parent_department]
+    
+    # Ordenar los departamentos raíz por nivel de acceso
+    root_departments.sort(key=lambda dept: access_level_order.get(dept.access_level, 999))
+    
+    # Función para construir el árbol de departamentos
+    def build_tree(parent):
+        tree = {
+            'department': parent,
+            'children': []
+        }
+        
+        # Encontrar todos los hijos directos
+        children = [dept for dept in departments if dept.parent_department and dept.parent_department.id == parent.id]
+        
+        # Ordenar los hijos por nivel de acceso
+        children.sort(key=lambda dept: access_level_order.get(dept.access_level, 999))
+        
+        # Para cada hijo, construir su subárbol
+        for child in children:
+            tree['children'].append(build_tree(child))
+            
+        return tree
+    
+    # Construir el árbol comenzando por cada departamento raíz
+    hierarchy = []
+    for root in root_departments:
+        hierarchy.append(build_tree(root))
+        
+    return hierarchy
+
 @login_required
 def company_dashboard(request):
     """Dashboard principal para usuarios de compañía"""
@@ -102,7 +149,7 @@ def company_dashboard(request):
         dashboard = CompanyDashboard.objects.get(company=company)
     except CompanyDashboard.DoesNotExist:
         messages.warning(request, "No hay dashboard configurado para tu compañía")
-        return render(request, 'dashboard/dashboard_empty.html', {'company': company})
+        return render(request, 'dashboard/dashboard_empty.html', {'company': company, 'employee': employee})
     
     # Determinar departamentos visibles según nivel de acceso
     visible_departments = []
@@ -162,63 +209,25 @@ def company_dashboard(request):
             'data': data
         })
     
+    # Obtener el tema de la compañía
+    try:
+        company_theme = CompanyTheme.objects.get(company=company)
+    except CompanyTheme.DoesNotExist:
+        company_theme = None
+    
     return render(request, 'dashboard/dashboard.html', {
         'company': company,
         'employee': employee,
         'widgets': widgets_data,
         'visible_departments': visible_departments,
         'departments_hierarchy': departments_hierarchy,
-        'selected_department': selected_dept
+        'selected_department': selected_dept,
+        'company_theme': company_theme,
     })
 
-def organize_departments_hierarchy(departments):
-    """
-    Organiza los departamentos en una estructura jerárquica
-    para mostrarlos correctamente en el sidebar,
-    ordenando por nivel de acceso (de mayor a menor)
-    """
-    # Definir el orden de los niveles de acceso (de mayor a menor)
-    access_level_order = {
-        'gerencial': 1,
-        'admin': 2,
-        'programatico': 3,
-        'user': 4
-    }
-    
-    # Primero identificamos departamentos raíz (sin padre)
-    root_departments = [dept for dept in departments if not dept.parent_department]
-    
-    # Ordenar los departamentos raíz por nivel de acceso
-    root_departments.sort(key=lambda dept: access_level_order.get(dept.access_level, 999))
-    
-    # Función para construir el árbol de departamentos
-    def build_tree(parent):
-        tree = {
-            'department': parent,
-            'children': []
-        }
-        
-        # Encontrar todos los hijos directos
-        children = [dept for dept in departments if dept.parent_department and dept.parent_department.id == parent.id]
-        
-        # Ordenar los hijos por nivel de acceso
-        children.sort(key=lambda dept: access_level_order.get(dept.access_level, 999))
-        
-        # Para cada hijo, construir su subárbol
-        for child in children:
-            tree['children'].append(build_tree(child))
-            
-        return tree
-    
-    # Construir el árbol comenzando por cada departamento raíz
-    hierarchy = []
-    for root in root_departments:
-        hierarchy.append(build_tree(root))
-        
-    return hierarchy
-
+#Función form_manager actualizada
 @login_required
-@user_passes_test(lambda u: u.is_superuser or (hasattr(u, 'employee') and u.employee.department.access_level in ['gerencial', 'admin']))
+@user_passes_test(lambda u: u.is_superuser)
 def form_manager(request):
     """Vista para administrar formularios personalizados"""
     if not hasattr(request.user, 'employee'):
@@ -228,17 +237,58 @@ def form_manager(request):
     employee = request.user.employee
     company = employee.company
     
-    # Obtener todos los formularios de la compañía
-    forms = CustomForm.objects.filter(company=company)
+    # Obtener departamento para filtrar (desde GET)
+    department_id = request.GET.get('department')
+    department_filter = None
+    
+    # Obtener departamentos disponibles según el nivel de acceso
+    if request.user.is_superuser or employee.department.access_level == 'gerencial':
+        available_departments = Department.objects.filter(company=company)
+    else:
+        available_departments = employee.department.get_all_child_departments()
+    
+    # Aplicar filtro de departamento si se especifica
+    base_forms = CustomForm.objects.filter(company=company)
+    
+    if department_id:
+        try:
+            department_filter = Department.objects.get(id=department_id, company=company)
+            # Verificar que el departamento esté entre los disponibles para el usuario
+            if department_filter in available_departments:
+                forms = base_forms.filter(departments=department_filter)
+            else:
+                forms = base_forms
+                department_filter = None
+                messages.warning(request, "No tienes acceso a ese departamento")
+        except Department.DoesNotExist:
+            forms = base_forms
+            messages.warning(request, "El departamento seleccionado no existe")
+    else:
+        forms = base_forms
+    
+    # Calcular estadísticas de formularios por departamento
+    department_stats = []
+    for dept in available_departments:
+        form_count = base_forms.filter(departments=dept).count()
+        department_stats.append({
+            'department': dept,
+            'form_count': form_count
+        })
+    
+    # Ordenar por cantidad de formularios (mayor a menor)
+    department_stats.sort(key=lambda x: x['form_count'], reverse=True)
     
     return render(request, 'dashboard/forms/form_manager.html', {
         'forms': forms,
         'company': company,
-        'employee': employee
+        'employee': employee,
+        'available_departments': available_departments,
+        'department_filter': department_filter,
+        'department_stats': department_stats
     })
 
 @login_required
-@user_passes_test(lambda u: u.is_superuser or (hasattr(u, 'employee') and u.employee.department.access_level in ['gerencial', 'admin']))
+@user_passes_test(lambda u: u.is_superuser)
 def create_edit_form(request, form_id=None):
     """Vista para crear o editar formularios personalizados"""
     if not hasattr(request.user, 'employee'):
@@ -291,6 +341,39 @@ def create_edit_form(request, form_id=None):
             selected_departments = request.POST.getlist('departments')
             custom_form.departments.set(selected_departments)
             
+            # Procesar grupos de campos
+            if 'group_names' in request.POST:
+                group_names = request.POST.getlist('group_names')
+                group_descriptions = request.POST.getlist('group_descriptions')
+                group_orders = request.POST.getlist('group_orders')
+                group_is_collapsed = request.POST.getlist('group_is_collapsed')
+                group_ids = request.POST.getlist('group_ids')
+                
+                # Eliminar grupos que no están en el formulario actual
+                FormFieldGroup.objects.filter(form=custom_form).exclude(id__in=[gid for gid in group_ids if gid]).delete()
+                
+                # Crear o actualizar grupos
+                for i in range(len(group_names)):
+                    group_id = group_ids[i] if i < len(group_ids) and group_ids[i] else None
+                    
+                    if group_id:
+                        # Actualizar grupo existente
+                        group = FormFieldGroup.objects.get(id=group_id)
+                        group.name = group_names[i]
+                        group.description = group_descriptions[i] if i < len(group_descriptions) else ''
+                        group.order = int(group_orders[i]) if i < len(group_orders) and group_orders[i].isdigit() else i
+                        group.is_collapsed = 'on' in group_is_collapsed[i] if i < len(group_is_collapsed) else True
+                        group.save()
+                    else:
+                        # Crear nuevo grupo
+                        FormFieldGroup.objects.create(
+                            form=custom_form,
+                            name=group_names[i],
+                            description=group_descriptions[i] if i < len(group_descriptions) else '',
+                            order=int(group_orders[i]) if i < len(group_orders) and group_orders[i].isdigit() else i,
+                            is_collapsed='on' in group_is_collapsed[i] if i < len(group_is_collapsed) else True
+                        )
+            
             # Procesar campos del formulario
             if 'field_names' in request.POST:
                 field_names = request.POST.getlist('field_names')
@@ -303,6 +386,7 @@ def create_edit_form(request, form_id=None):
                 field_defaults = request.POST.getlist('field_defaults')
                 field_options = request.POST.getlist('field_options')
                 field_ids = request.POST.getlist('field_ids')
+                field_groups = request.POST.getlist('field_groups')
                 
                 # Eliminar campos que no están en el formulario actual
                 FormField.objects.filter(form=custom_form).exclude(id__in=[fid for fid in field_ids if fid]).delete()
@@ -310,6 +394,14 @@ def create_edit_form(request, form_id=None):
                 # Crear o actualizar campos
                 for i in range(len(field_names)):
                     field_id = field_ids[i] if i < len(field_ids) and field_ids[i] else None
+                    
+                    # Obtener grupo si se especifica
+                    group = None
+                    if i < len(field_groups) and field_groups[i]:
+                        try:
+                            group = FormFieldGroup.objects.get(id=field_groups[i])
+                        except FormFieldGroup.DoesNotExist:
+                            pass
                     
                     # Convertir opciones de string a JSON si es necesario
                     options_json = None
@@ -332,6 +424,7 @@ def create_edit_form(request, form_id=None):
                         field.order = int(field_orders[i]) if i < len(field_orders) and field_orders[i].isdigit() else i
                         field.default_value = field_defaults[i] if i < len(field_defaults) else ''
                         field.options = options_json
+                        field.group = group
                         field.save()
                     else:
                         # Crear nuevo campo
@@ -345,7 +438,8 @@ def create_edit_form(request, form_id=None):
                             help_text=field_help_texts[i] if i < len(field_help_texts) else '',
                             order=int(field_orders[i]) if i < len(field_orders) and field_orders[i].isdigit() else i,
                             default_value=field_defaults[i] if i < len(field_defaults) else '',
-                            options=options_json
+                            options=options_json,
+                            group=group
                         )
             
             messages.success(request, f"Formulario '{custom_form.name}' guardado correctamente")
@@ -367,11 +461,12 @@ def create_edit_form(request, form_id=None):
         'company': company,
         'employee': employee,
         'available_departments': available_departments,
-        'selected_departments': custom_form.departments.all() if not is_new else []
+        'selected_departments': custom_form.departments.all() if not is_new else [],
+        'field_groups': custom_form.field_groups.all() if not is_new else []
     })
 
 @login_required
-@user_passes_test(lambda u: u.is_superuser or (hasattr(u, 'employee') and u.employee.department.access_level in ['gerencial', 'admin']))
+@user_passes_test(lambda u: u.is_superuser)
 def delete_form(request, form_id):
     """Vista para eliminar un formulario personalizado"""
     if not hasattr(request.user, 'employee'):
@@ -394,6 +489,8 @@ def delete_form(request, form_id):
         'company': company,
         'employee': employee
     })
+
+# dashboard/views.py - Actualizar la función fill_form
 
 @login_required
 def fill_form(request, form_code):
@@ -532,9 +629,13 @@ def fill_form(request, form_code):
         department=selected_dept
     ).order_by('-date_created')[:10]
     
+    # Obtener grupos de campos para este formulario
+    field_groups = custom_form.field_groups.all().order_by('order')
+    
     return render(request, 'dashboard/forms/fill_form.html', {
         'custom_form': custom_form,
-        'form_fields': custom_form.fields.all().order_by('order'),
+        'form_fields': custom_form.fields.all().order_by('group__order', 'group', 'order'),
+        'field_groups': field_groups,
         'company': company,
         'employee': employee,
         'visible_departments': visible_departments,
@@ -688,4 +789,137 @@ def list_available_forms(request):
         'forms': forms,
         'company': company,
         'employee': employee
+    })
+
+# dashboard/views.py - Añadir al final
+
+@login_required
+@user_passes_test(lambda u: u.is_superuser)
+def company_theme(request):
+    """Vista para personalizar el tema de la compañía"""
+    if not hasattr(request.user, 'employee'):
+        messages.error(request, "Tu usuario no está asociado a ninguna compañía")
+        return redirect('logout')
+    
+    employee = request.user.employee
+    company = employee.company
+    
+    # Obtener o crear el tema de la compañía
+    theme, created = CompanyTheme.objects.get_or_create(company=company)
+    
+    if request.method == 'POST':
+        # Actualizar configuración del tema
+        theme.primary_color = request.POST.get('primary_color', theme.primary_color)
+        theme.secondary_color = request.POST.get('secondary_color', theme.secondary_color)
+        theme.accent_color = request.POST.get('accent_color', theme.accent_color)
+        theme.text_color = request.POST.get('text_color', theme.text_color)
+        theme.light_text_color = request.POST.get('light_text_color', theme.light_text_color)
+        theme.font_family = request.POST.get('font_family', theme.font_family)
+        theme.custom_css = request.POST.get('custom_css', theme.custom_css)
+        theme.custom_js = request.POST.get('custom_js', theme.custom_js)
+        theme.enabled = 'enabled' in request.POST
+        
+        # Procesar archivos subidos
+        if 'logo' in request.FILES:
+            theme.logo = request.FILES['logo']
+        
+        if 'logo_small' in request.FILES:
+            theme.logo_small = request.FILES['logo_small']
+        
+        if 'background_image' in request.FILES:
+            theme.background_image = request.FILES['background_image']
+        
+        # Manejar eliminación de archivos
+        if 'remove_logo' in request.POST:
+            theme.logo = None
+        
+        if 'remove_logo_small' in request.POST:
+            theme.logo_small = None
+        
+        if 'remove_background' in request.POST:
+            theme.background_image = None
+        
+        theme.save()
+        messages.success(request, "Tema actualizado correctamente")
+        return redirect('company_theme')
+    
+    # Obtener fuentes disponibles de Google Fonts (las más comunes)
+    google_fonts = [
+        ("'Montserrat', sans-serif", "Montserrat"),
+        ("'Open Sans', sans-serif", "Open Sans"),
+        ("'Roboto', sans-serif", "Roboto"),
+        ("'Lato', sans-serif", "Lato"),
+        ("'Poppins', sans-serif", "Poppins"),
+        ("'Raleway', sans-serif", "Raleway"),
+        ("'Ubuntu', sans-serif", "Ubuntu"),
+        ("'Nunito', sans-serif", "Nunito"),
+    ]
+    
+    return render(request, 'dashboard/settings/company_theme.html', {
+        'company': company,
+        'employee': employee,
+        'theme': theme,
+        'google_fonts': google_fonts
+    })
+
+def theme_context_processor(request):
+    """Procesador de contexto para incluir el tema de la compañía en todas las plantillas"""
+    context = {}
+    
+    if request.user.is_authenticated and hasattr(request.user, 'employee'):
+        company = request.user.employee.company
+        
+        try:
+            # Obtener el tema de la compañía si existe
+            theme = CompanyTheme.objects.get(company=company)
+            context['company_theme'] = theme
+        except CompanyTheme.DoesNotExist:
+            pass
+    
+    return context
+
+# dashboard/views.py - Añadir vista para dashboard de administrador
+
+@login_required
+@user_passes_test(lambda u: u.is_superuser)
+def admin_dashboard(request):
+    """Dashboard exclusivo para superusuarios con estadísticas y gestión global"""
+    
+    # Estadísticas generales
+    total_companies = Company.objects.count()
+    active_companies = Company.objects.filter(is_active=True).count()
+    total_departments = Department.objects.count()
+    total_employees = Employee.objects.count()
+    total_forms = CustomForm.objects.count()
+    total_form_submissions = FormData.objects.count()
+    
+    # Compañías más recientes
+    recent_companies = Company.objects.order_by('-created_at')[:5]
+    
+    # Formularios más utilizados (con más envíos)
+    popular_forms = CustomForm.objects.annotate(
+        submissions_count=models.Count('submissions')
+    ).order_by('-submissions_count')[:5]
+    
+    # Compañías con más empleados
+    companies_by_employees = Company.objects.annotate(
+        employees_count=models.Count('employees')
+    ).order_by('-employees_count')[:5]
+    
+    # Actividad reciente (últimos envíos de formularios)
+    recent_activity = FormData.objects.select_related(
+        'company', 'department', 'form', 'created_by'
+    ).order_by('-date_created')[:10]
+    
+    return render(request, 'dashboard/admin/admin_dashboard.html', {
+        'total_companies': total_companies,
+        'active_companies': active_companies,
+        'total_departments': total_departments,
+        'total_employees': total_employees,
+        'total_forms': total_forms,
+        'total_form_submissions': total_form_submissions,
+        'recent_companies': recent_companies,
+        'popular_forms': popular_forms,
+        'companies_by_employees': companies_by_employees,
+        'recent_activity': recent_activity
     })

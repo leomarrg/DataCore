@@ -14,4 +14,7 @@ urlpatterns = [
     path('forms/<slug:form_code>/', views.fill_form, name='fill_form'),
     path('forms/<slug:form_code>/data/', views.view_form_data, name='view_form_data'),
     path('forms/list/', views.list_available_forms, name='list_forms'),
+
+    path('settings/theme/', views.company_theme, name='company_theme'),
+    path('admin/dashboard/', views.admin_dashboard, name='admin_dashboard'),
 ]

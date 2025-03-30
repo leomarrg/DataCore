@@ -1,0 +1,128 @@
+<!-- dashboard/templates/dashboard/settings/company_theme.html -->
+{% extends "dashboard/base.html" %}
+
+{% block title %}Personalizar Tema - {{ company.name }}{% endblock %}
+
+{% block extra_head %}
+<style>
+    .color-preview {
+        width: 30px;
+        height: 30px;
+        display: inline-block;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        vertical-align: middle;
+        margin-right: 10px;
+    }
+    
+    .font-preview {
+        font-size: 1.2rem;
+        margin-top: 10px;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+    }
+    
+    .theme-preview {
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        overflow: hidden;
+        margin-bottom: 20px;
+    }
+    
+    .preview-navbar {
+        background-color: var(--primary-color);
+        color: var(--light-text-color);
+        padding: 10px 15px;
+    }
+    
+    .preview-content {
+        padding: 15px;
+    }
+    
+    .preview-card {
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        margin-bottom: 15px;
+    }
+    
+    .preview-card-header {
+        background-color: color-mix(in srgb, var(--primary-color) 30%, white);
+        padding: 10px 15px;
+        border-bottom: 1px solid #ddd;
+    }
+    
+    .preview-card-body {
+        padding: 15px;
+    }
+    
+    .theme-section {
+        margin-bottom: 30px;
+        padding: 20px;
+        background-color: #f9f9f9;
+        border-radius: 8px;
+    }
+    
+    textarea.code-editor {
+        font-family: monospace;
+        min-height: 200px;
+        font-size: 0.9rem;
+    }
+    
+    .image-preview {
+        max-width: 100%;
+        max-height: 150px;
+        margin-top: 10px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        padding: 5px;
+    }
+    
+    .tab-content {
+        padding: 20px;
+        border: 1px solid #dee2e6;
+        border-top: none;
+        border-radius: 0 0 5px 5px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Personalizar Tema</h1>
+        <a href="{% url 'company_dashboard' %}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Volver al dashboard
+        </a>
+    </div>
+    
+    {% if messages %}
+    <div class="messages mb-4">
+        {% for message in messages %}
+        <div class="alert {% if message.tags == 'error' %}alert-danger{% elif message.tags == 'success' %}alert-success{% elif message.tags == 'warning' %}alert-warning{% else %}alert-info{% endif %} alert-dismissible fade show">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    
+    <!-- Tabs para diferentes secciones -->
+    <ul class="nav nav-tabs mb-0" id="themeTab" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="preview-tab" data-bs-toggle="tab" data-bs-target="#preview" type="button" role="tab" aria-controls="preview" aria-selected="true">
+                <i class="fas fa-eye"></i> Vista previa
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="colors-tab" data-bs-toggle="tab" data-bs-target="#colors" type="button" role="tab" aria-controls="colors" aria-selected="false">
+                <i class="fas fa-palette"></i> Colores y fuentes
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="images-tab" data-bs-toggle="tab" data-bs-target="#images" type="button" role="tab" aria-controls="images" aria-selected="false">
+                <i class="fas fa-image"></i> Imágenes
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="custom-tab" data-bs-toggle="tab" data-bs-target="#custom" type="button" role="tab" aria
