@@ -421,6 +421,201 @@ def create_edit_form(request, form_id=None):
             
         # Obtener departamentos para asignar
         available_departments = Department.objects.filter(company=company)
+
+        if request.method == 'POST':
+            # Procesar datos del formulario
+            print("Datos del formulario recibidos:", request.POST)
+            print("Archivos recibidos:", request.FILES)
+            
+            form_data = {
+                'name': request.POST.get('name'),
+                'description': request.POST.get('description'),
+                'code_name': request.POST.get('code_name'),
+                'is_active': 'is_active' in request.POST
+            }
+            
+            # Validar datos de manera más explícita
+            errors = {}
+            if not form_data['name']:
+                errors['name'] = "El nombre es obligatorio"
+                print("Error: El nombre es obligatorio")
+            
+            if not form_data['code_name']:
+                errors['code_name'] = "El código identificador es obligatorio"
+                print("Error: El código identificador es obligatorio")
+            elif not is_new and CustomForm.objects.filter(company=company, code_name=form_data['code_name']).exclude(id=custom_form.id).exists():
+                errors['code_name'] = "Este código ya está en uso"
+                print(f"Error: El código {form_data['code_name']} ya está en uso")
+            elif is_new and CustomForm.objects.filter(company=company, code_name=form_data['code_name']).exists():
+                errors['code_name'] = "Este código ya está en uso"
+                print(f"Error: El código {form_data['code_name']} ya está en uso")
+            
+            # Si no hay errores, continuar con el guardado
+            if not errors:
+                try:
+                    # Guardar formulario con manejo explícito de errores
+                    print("Guardando formulario...")
+                    custom_form.name = form_data['name']
+                    custom_form.description = form_data['description']
+                    custom_form.code_name = form_data['code_name']
+                    custom_form.is_active = form_data['is_active']
+                    if is_new:
+                        custom_form.company = company
+                    custom_form.save()
+                    print("Formulario base guardado correctamente")
+                    
+                    # Guardar departamentos asignados
+                    selected_departments = request.POST.getlist('departments')
+                    print(f"Departamentos seleccionados: {selected_departments}")
+                    custom_form.departments.set(selected_departments)
+                    print("Departamentos guardados correctamente")
+                    
+                    # Procesar grupos de campos
+                    if 'group_names' in request.POST:
+                        group_names = request.POST.getlist('group_names')
+                        group_descriptions = request.POST.getlist('group_descriptions')
+                        group_orders = request.POST.getlist('group_orders')
+                        group_is_collapsed = request.POST.getlist('group_is_collapsed')
+                        group_ids = request.POST.getlist('group_ids')
+                        
+                        # Get existing group IDs (excluding temporary ones)
+                        existing_group_ids = [gid for gid in group_ids if gid and not gid.startswith('new_')]
+                        
+                        # Eliminar grupos que no están en el formulario actual
+                        FormFieldGroup.objects.filter(form=custom_form).exclude(id__in=existing_group_ids).delete()
+                        
+                        # Crear o actualizar grupos
+                        for i in range(len(group_names)):
+                            group_id = group_ids[i] if i < len(group_ids) else None
+                            
+                            # Skip temporary IDs that start with "new_"
+                            if group_id and not group_id.startswith('new_'):
+                                # Actualizar grupo existente
+                                try:
+                                    group = FormFieldGroup.objects.get(id=group_id)
+                                    group.name = group_names[i]
+                                    group.description = group_descriptions[i] if i < len(group_descriptions) else ''
+                                    group.order = int(group_orders[i]) if i < len(group_orders) and group_orders[i].isdigit() else i
+                                    group.is_collapsed = 'on' in group_is_collapsed[i] if i < len(group_is_collapsed) else True
+                                    group.save()
+                                except FormFieldGroup.DoesNotExist:
+                                    # If the group ID doesn't exist, create a new one
+                                    FormFieldGroup.objects.create(
+                                        form=custom_form,
+                                        name=group_names[i],
+                                        description=group_descriptions[i] if i < len(group_descriptions) else '',
+                                        order=int(group_orders[i]) if i < len(group_orders) and group_orders[i].isdigit() else i,
+                                        is_collapsed='on' in group_is_collapsed[i] if i < len(group_is_collapsed) else True
+                                    )
+                            else:
+                                # Create new group (for new groups and when group_id is empty)
+                                FormFieldGroup.objects.create(
+                                    form=custom_form,
+                                    name=group_names[i],
+                                    description=group_descriptions[i] if i < len(group_descriptions) else '',
+                                    order=int(group_orders[i]) if i < len(group_orders) and group_orders[i].isdigit() else i,
+                                    is_collapsed='on' in group_is_collapsed[i] if i < len(group_is_collapsed) else True
+                                )
+                    
+                    # Procesar campos del formulario
+                    if 'field_names' in request.POST:
+                        field_names = request.POST.getlist('field_names')
+                        field_types = request.POST.getlist('field_types')
+                        field_labels = request.POST.getlist('field_labels')
+                        field_required = request.POST.getlist('field_required')
+                        field_placeholders = request.POST.getlist('field_placeholders')
+                        field_help_texts = request.POST.getlist('field_help_texts')
+                        field_orders = request.POST.getlist('field_orders')
+                        field_defaults = request.POST.getlist('field_defaults')
+                        field_options = request.POST.getlist('field_options')
+                        field_ids = request.POST.getlist('field_ids')
+                        field_groups = request.POST.getlist('field_groups')
+                        
+                        # Get existing field IDs (excluding temporary ones)
+                        existing_field_ids = [fid for fid in field_ids if fid and not fid.startswith('new_')]
+                        
+                        # Eliminar campos que no están en el formulario actual
+                        FormField.objects.filter(form=custom_form).exclude(id__in=existing_field_ids).delete()
+                        
+                        # Crear o actualizar campos
+                        for i in range(len(field_names)):
+                            field_id = field_ids[i] if i < len(field_ids) else None
+                            
+                            # Obtener grupo si se especifica
+                            group = None
+                            if i < len(field_groups) and field_groups[i]:
+                                # Solo procesar grupo si no es un ID temporal
+                                if not field_groups[i].startswith('new_'):
+                                    try:
+                                        group = FormFieldGroup.objects.get(id=field_groups[i])
+                                    except FormFieldGroup.DoesNotExist:
+                                        pass
+                            
+                            # Convertir opciones de string a JSON si es necesario
+                            options_json = None
+                            if i < len(field_options) and field_options[i]:
+                                try:
+                                    options_list = [opt.strip() for opt in field_options[i].split(',')]
+                                    options_json = {str(j): opt for j, opt in enumerate(options_list)}
+                                except:
+                                    options_json = {}
+                            
+                            # Skip temporary IDs that start with "new_"
+                            if field_id and not field_id.startswith('new_'):
+                                # Actualizar campo existente
+                                try:
+                                    field = FormField.objects.get(id=field_id)
+                                    field.name = field_names[i]
+                                    field.field_type = field_types[i]
+                                    field.label = field_labels[i]
+                                    field.required = 'on' in field_required[i] if i < len(field_required) else False
+                                    field.placeholder = field_placeholders[i] if i < len(field_placeholders) else ''
+                                    field.help_text = field_help_texts[i] if i < len(field_help_texts) else ''
+                                    field.order = int(field_orders[i]) if i < len(field_orders) and field_orders[i].isdigit() else i
+                                    field.default_value = field_defaults[i] if i < len(field_defaults) else ''
+                                    field.options = options_json
+                                    field.group = group
+                                    field.save()
+                                except FormField.DoesNotExist:
+                                    # If the field doesn't exist, create a new one
+                                    FormField.objects.create(
+                                        form=custom_form,
+                                        name=field_names[i],
+                                        field_type=field_types[i],
+                                        label=field_labels[i],
+                                        required='on' in field_required[i] if i < len(field_required) else False,
+                                        placeholder=field_placeholders[i] if i < len(field_placeholders) else '',
+                                        help_text=field_help_texts[i] if i < len(field_help_texts) else '',
+                                        order=int(field_orders[i]) if i < len(field_orders) and field_orders[i].isdigit() else i,
+                                        default_value=field_defaults[i] if i < len(field_defaults) else '',
+                                        options=options_json,
+                                        group=group
+                                    )
+                            else:
+                                # Create new field
+                                FormField.objects.create(
+                                    form=custom_form,
+                                    name=field_names[i],
+                                    field_type=field_types[i],
+                                    label=field_labels[i],
+                                    required='on' in field_required[i] if i < len(field_required) else False,
+                                    placeholder=field_placeholders[i] if i < len(field_placeholders) else '',
+                                    help_text=field_help_texts[i] if i < len(field_help_texts) else '',
+                                    order=int(field_orders[i]) if i < len(field_orders) and field_orders[i].isdigit() else i,
+                                    default_value=field_defaults[i] if i < len(field_defaults) else '',
+                                    options=options_json,
+                                    group=group
+                                )
+                    
+                    messages.success(request, f"Formulario '{custom_form.name}' guardado correctamente")
+                    return redirect('form_manager')
+                except Exception as e:
+                    print(f"Error al guardar formulario: {str(e)}")
+                    messages.error(request, f"Error al guardar formulario: {str(e)}")
+            else:
+                # Mostrar errores
+                for field, error in errors.items():
+                    messages.error(request, error)
         
         return render(request, 'dashboard/forms/create_edit_form.html', {
             'custom_form': custom_form,
@@ -461,75 +656,80 @@ def create_edit_form(request, form_id=None):
         }
         
         # Validar datos de manera más explícita
-    errors = {}
-    if not form_data['name']:
-        errors['name'] = "El nombre es obligatorio"
-        print("Error: El nombre es obligatorio")
-    
-    if not form_data['code_name']:
-        errors['code_name'] = "El código identificador es obligatorio"
-        print("Error: El código identificador es obligatorio")
-    elif not is_new and CustomForm.objects.filter(company=company, code_name=form_data['code_name']).exclude(id=custom_form.id).exists():
-        errors['code_name'] = "Este código ya está en uso"
-        print(f"Error: El código {form_data['code_name']} ya está en uso")
-    elif is_new and CustomForm.objects.filter(company=company, code_name=form_data['code_name']).exists():
-        errors['code_name'] = "Este código ya está en uso"
-        print(f"Error: El código {form_data['code_name']} ya está en uso")
-    
-    # Si no hay errores, continuar con el guardado
-    if not errors:
-        try:
-            # Guardar formulario con manejo explícito de errores
-            print("Guardando formulario...")
-            custom_form.name = form_data['name']
-            custom_form.description = form_data['description']
-            custom_form.code_name = form_data['code_name']
-            custom_form.is_active = form_data['is_active']
-            if is_new:
-                custom_form.company = company
-            custom_form.save()
-            print("Formulario base guardado correctamente")
-            
-            # Guardar departamentos asignados
-            selected_departments = request.POST.getlist('departments')
-            print(f"Departamentos seleccionados: {selected_departments}")
-            custom_form.departments.set(selected_departments)
-            print("Departamentos guardados correctamente")
-            
-            # Guardar departamentos asignados
-            selected_departments = request.POST.getlist('departments')
-            custom_form.departments.set(selected_departments)
-            
-            # Procesar grupos de campos
-            if 'group_names' in request.POST:
-                group_names = request.POST.getlist('group_names')
-                group_descriptions = request.POST.getlist('group_descriptions')
-                group_orders = request.POST.getlist('group_orders')
-                group_is_collapsed = request.POST.getlist('group_is_collapsed')
-                group_ids = request.POST.getlist('group_ids')
+        errors = {}
+        if not form_data['name']:
+            errors['name'] = "El nombre es obligatorio"
+            print("Error: El nombre es obligatorio")
+        
+        if not form_data['code_name']:
+            errors['code_name'] = "El código identificador es obligatorio"
+            print("Error: El código identificador es obligatorio")
+        elif not is_new and CustomForm.objects.filter(company=company, code_name=form_data['code_name']).exclude(id=custom_form.id).exists():
+            errors['code_name'] = "Este código ya está en uso"
+            print(f"Error: El código {form_data['code_name']} ya está en uso")
+        elif is_new and CustomForm.objects.filter(company=company, code_name=form_data['code_name']).exists():
+            errors['code_name'] = "Este código ya está en uso"
+            print(f"Error: El código {form_data['code_name']} ya está en uso")
+        
+        # Si no hay errores, continuar con el guardado
+        if not errors:
+            try:
+                # Guardar formulario con manejo explícito de errores
+                print("Guardando formulario...")
+                custom_form.name = form_data['name']
+                custom_form.description = form_data['description']
+                custom_form.code_name = form_data['code_name']
+                custom_form.is_active = form_data['is_active']
+                if is_new:
+                    custom_form.company = company
+                custom_form.save()
+                print("Formulario base guardado correctamente")
                 
-                # Get existing group IDs (excluding temporary ones)
-                existing_group_ids = [gid for gid in group_ids if gid and not gid.startswith('new_')]
+                # Guardar departamentos asignados
+                selected_departments = request.POST.getlist('departments')
+                print(f"Departamentos seleccionados: {selected_departments}")
+                custom_form.departments.set(selected_departments)
+                print("Departamentos guardados correctamente")
                 
-                # Eliminar grupos que no están en el formulario actual
-                FormFieldGroup.objects.filter(form=custom_form).exclude(id__in=existing_group_ids).delete()
-                
-                # Crear o actualizar grupos
-                for i in range(len(group_names)):
-                    group_id = group_ids[i] if i < len(group_ids) else None
+                # Procesar grupos de campos
+                if 'group_names' in request.POST:
+                    group_names = request.POST.getlist('group_names')
+                    group_descriptions = request.POST.getlist('group_descriptions')
+                    group_orders = request.POST.getlist('group_orders')
+                    group_is_collapsed = request.POST.getlist('group_is_collapsed')
+                    group_ids = request.POST.getlist('group_ids')
                     
-                    # Skip temporary IDs that start with "new_"
-                    if group_id and not group_id.startswith('new_'):
-                        # Actualizar grupo existente
-                        try:
-                            group = FormFieldGroup.objects.get(id=group_id)
-                            group.name = group_names[i]
-                            group.description = group_descriptions[i] if i < len(group_descriptions) else ''
-                            group.order = int(group_orders[i]) if i < len(group_orders) and group_orders[i].isdigit() else i
-                            group.is_collapsed = 'on' in group_is_collapsed[i] if i < len(group_is_collapsed) else True
-                            group.save()
-                        except FormFieldGroup.DoesNotExist:
-                            # If the group ID doesn't exist, create a new one
+                    # Get existing group IDs (excluding temporary ones)
+                    existing_group_ids = [gid for gid in group_ids if gid and not gid.startswith('new_')]
+                    
+                    # Eliminar grupos que no están en el formulario actual
+                    FormFieldGroup.objects.filter(form=custom_form).exclude(id__in=existing_group_ids).delete()
+                    
+                    # Crear o actualizar grupos
+                    for i in range(len(group_names)):
+                        group_id = group_ids[i] if i < len(group_ids) else None
+                        
+                        # Skip temporary IDs that start with "new_"
+                        if group_id and not group_id.startswith('new_'):
+                            # Actualizar grupo existente
+                            try:
+                                group = FormFieldGroup.objects.get(id=group_id)
+                                group.name = group_names[i]
+                                group.description = group_descriptions[i] if i < len(group_descriptions) else ''
+                                group.order = int(group_orders[i]) if i < len(group_orders) and group_orders[i].isdigit() else i
+                                group.is_collapsed = 'on' in group_is_collapsed[i] if i < len(group_is_collapsed) else True
+                                group.save()
+                            except FormFieldGroup.DoesNotExist:
+                                # If the group ID doesn't exist, create a new one
+                                FormFieldGroup.objects.create(
+                                    form=custom_form,
+                                    name=group_names[i],
+                                    description=group_descriptions[i] if i < len(group_descriptions) else '',
+                                    order=int(group_orders[i]) if i < len(group_orders) and group_orders[i].isdigit() else i,
+                                    is_collapsed='on' in group_is_collapsed[i] if i < len(group_is_collapsed) else True
+                                )
+                        else:
+                            # Create new group (for new groups and when group_id is empty)
                             FormFieldGroup.objects.create(
                                 form=custom_form,
                                 name=group_names[i],
@@ -537,77 +737,83 @@ def create_edit_form(request, form_id=None):
                                 order=int(group_orders[i]) if i < len(group_orders) and group_orders[i].isdigit() else i,
                                 is_collapsed='on' in group_is_collapsed[i] if i < len(group_is_collapsed) else True
                             )
-                    else:
-                        # Create new group (for new groups and when group_id is empty)
-                        FormFieldGroup.objects.create(
-                            form=custom_form,
-                            name=group_names[i],
-                            description=group_descriptions[i] if i < len(group_descriptions) else '',
-                            order=int(group_orders[i]) if i < len(group_orders) and group_orders[i].isdigit() else i,
-                            is_collapsed='on' in group_is_collapsed[i] if i < len(group_is_collapsed) else True
-                        )
-            
-            # Procesar campos del formulario
-            if 'field_names' in request.POST:
-                field_names = request.POST.getlist('field_names')
-                field_types = request.POST.getlist('field_types')
-                field_labels = request.POST.getlist('field_labels')
-                field_required = request.POST.getlist('field_required')
-                field_placeholders = request.POST.getlist('field_placeholders')
-                field_help_texts = request.POST.getlist('field_help_texts')
-                field_orders = request.POST.getlist('field_orders')
-                field_defaults = request.POST.getlist('field_defaults')
-                field_options = request.POST.getlist('field_options')
-                field_ids = request.POST.getlist('field_ids')
-                field_groups = request.POST.getlist('field_groups')
                 
-                # Get existing field IDs (excluding temporary ones)
-                existing_field_ids = [fid for fid in field_ids if fid and not fid.startswith('new_')]
-                
-                # Eliminar campos que no están en el formulario actual
-                FormField.objects.filter(form=custom_form).exclude(id__in=existing_field_ids).delete()
-                
-                # Crear o actualizar campos
-                for i in range(len(field_names)):
-                    field_id = field_ids[i] if i < len(field_ids) else None
+                # Procesar campos del formulario
+                if 'field_names' in request.POST:
+                    field_names = request.POST.getlist('field_names')
+                    field_types = request.POST.getlist('field_types')
+                    field_labels = request.POST.getlist('field_labels')
+                    field_required = request.POST.getlist('field_required')
+                    field_placeholders = request.POST.getlist('field_placeholders')
+                    field_help_texts = request.POST.getlist('field_help_texts')
+                    field_orders = request.POST.getlist('field_orders')
+                    field_defaults = request.POST.getlist('field_defaults')
+                    field_options = request.POST.getlist('field_options')
+                    field_ids = request.POST.getlist('field_ids')
+                    field_groups = request.POST.getlist('field_groups')
                     
-                    # Obtener grupo si se especifica
-                    group = None
-                    if i < len(field_groups) and field_groups[i]:
-                        # Solo procesar grupo si no es un ID temporal
-                        if not field_groups[i].startswith('new_'):
+                    # Get existing field IDs (excluding temporary ones)
+                    existing_field_ids = [fid for fid in field_ids if fid and not fid.startswith('new_')]
+                    
+                    # Eliminar campos que no están en el formulario actual
+                    FormField.objects.filter(form=custom_form).exclude(id__in=existing_field_ids).delete()
+                    
+                    # Crear o actualizar campos
+                    for i in range(len(field_names)):
+                        field_id = field_ids[i] if i < len(field_ids) else None
+                        
+                        # Obtener grupo si se especifica
+                        group = None
+                        if i < len(field_groups) and field_groups[i]:
+                            # Solo procesar grupo si no es un ID temporal
+                            if not field_groups[i].startswith('new_'):
+                                try:
+                                    group = FormFieldGroup.objects.get(id=field_groups[i])
+                                except FormFieldGroup.DoesNotExist:
+                                    pass
+                        
+                        # Convertir opciones de string a JSON si es necesario
+                        options_json = None
+                        if i < len(field_options) and field_options[i]:
                             try:
-                                group = FormFieldGroup.objects.get(id=field_groups[i])
-                            except FormFieldGroup.DoesNotExist:
-                                pass
-                    
-                    # Convertir opciones de string a JSON si es necesario
-                    options_json = None
-                    if i < len(field_options) and field_options[i]:
-                        try:
-                            options_list = [opt.strip() for opt in field_options[i].split(',')]
-                            options_json = {str(j): opt for j, opt in enumerate(options_list)}
-                        except:
-                            options_json = {}
-                    
-                    # Skip temporary IDs that start with "new_"
-                    if field_id and not field_id.startswith('new_'):
-                        # Actualizar campo existente
-                        try:
-                            field = FormField.objects.get(id=field_id)
-                            field.name = field_names[i]
-                            field.field_type = field_types[i]
-                            field.label = field_labels[i]
-                            field.required = 'on' in field_required[i] if i < len(field_required) else False
-                            field.placeholder = field_placeholders[i] if i < len(field_placeholders) else ''
-                            field.help_text = field_help_texts[i] if i < len(field_help_texts) else ''
-                            field.order = int(field_orders[i]) if i < len(field_orders) and field_orders[i].isdigit() else i
-                            field.default_value = field_defaults[i] if i < len(field_defaults) else ''
-                            field.options = options_json
-                            field.group = group
-                            field.save()
-                        except FormField.DoesNotExist:
-                            # If the field doesn't exist, create a new one
+                                options_list = [opt.strip() for opt in field_options[i].split(',')]
+                                options_json = {str(j): opt for j, opt in enumerate(options_list)}
+                            except:
+                                options_json = {}
+                        
+                        # Skip temporary IDs that start with "new_"
+                        if field_id and not field_id.startswith('new_'):
+                            # Actualizar campo existente
+                            try:
+                                field = FormField.objects.get(id=field_id)
+                                field.name = field_names[i]
+                                field.field_type = field_types[i]
+                                field.label = field_labels[i]
+                                field.required = 'on' in field_required[i] if i < len(field_required) else False
+                                field.placeholder = field_placeholders[i] if i < len(field_placeholders) else ''
+                                field.help_text = field_help_texts[i] if i < len(field_help_texts) else ''
+                                field.order = int(field_orders[i]) if i < len(field_orders) and field_orders[i].isdigit() else i
+                                field.default_value = field_defaults[i] if i < len(field_defaults) else ''
+                                field.options = options_json
+                                field.group = group
+                                field.save()
+                            except FormField.DoesNotExist:
+                                # If the field doesn't exist, create a new one
+                                FormField.objects.create(
+                                    form=custom_form,
+                                    name=field_names[i],
+                                    field_type=field_types[i],
+                                    label=field_labels[i],
+                                    required='on' in field_required[i] if i < len(field_required) else False,
+                                    placeholder=field_placeholders[i] if i < len(field_placeholders) else '',
+                                    help_text=field_help_texts[i] if i < len(field_help_texts) else '',
+                                    order=int(field_orders[i]) if i < len(field_orders) and field_orders[i].isdigit() else i,
+                                    default_value=field_defaults[i] if i < len(field_defaults) else '',
+                                    options=options_json,
+                                    group=group
+                                )
+                        else:
+                            # Create new field
                             FormField.objects.create(
                                 form=custom_form,
                                 name=field_names[i],
@@ -621,31 +827,16 @@ def create_edit_form(request, form_id=None):
                                 options=options_json,
                                 group=group
                             )
-                    else:
-                        # Create new field
-                        FormField.objects.create(
-                            form=custom_form,
-                            name=field_names[i],
-                            field_type=field_types[i],
-                            label=field_labels[i],
-                            required='on' in field_required[i] if i < len(field_required) else False,
-                            placeholder=field_placeholders[i] if i < len(field_placeholders) else '',
-                            help_text=field_help_texts[i] if i < len(field_help_texts) else '',
-                            order=int(field_orders[i]) if i < len(field_orders) and field_orders[i].isdigit() else i,
-                            default_value=field_defaults[i] if i < len(field_defaults) else '',
-                            options=options_json,
-                            group=group
-                        )
-            
-            messages.success(request, f"Formulario '{custom_form.name}' guardado correctamente")
-            return redirect('form_manager')
-        except Exception as e:
-            print(f"Error al guardar formulario: {str(e)}")
-            messages.error(request, f"Error al guardar formulario: {str(e)}")
-    else:
-        # Mostrar errores
-        for field, error in errors.items():
-            messages.error(request, error)
+                
+                messages.success(request, f"Formulario '{custom_form.name}' guardado correctamente")
+                return redirect('form_manager')
+            except Exception as e:
+                print(f"Error al guardar formulario: {str(e)}")
+                messages.error(request, f"Error al guardar formulario: {str(e)}")
+        else:
+            # Mostrar errores
+            for field, error in errors.items():
+                messages.error(request, error)
     
     # Obtener departamentos para asignar
     if request.user.is_superuser or employee.department.access_level == 'gerencial':
