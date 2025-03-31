@@ -64,7 +64,7 @@
                 {% if company_theme and company_theme.enabled and company_theme.logo %}
                 <img src="{{ company_theme.logo.url }}" alt="{{ company.name }}" height="40" class="d-inline-block align-top me-2">
                 {% else %}
-                {{ company.name }}
+                {{ company.name|default:"Panel de Administración" }}
                 {% endif %}
             </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
@@ -76,7 +76,7 @@
                         <a class="nav-link {% if request.path == '/dashboard/' %}active{% endif %}" href="{% url 'company_dashboard' %}">Dashboard</a>
                     </li>
                     
-                    <!-- Menú desplegable para formularios - Ahora solo con opciones de visualización para gerenciales -->
+                    <!-- Menú desplegable para formularios -->
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle {% if '/forms/' in request.path %}active{% endif %}" href="#" id="formsDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                             Formularios
@@ -158,8 +158,12 @@
                     {% endif %}
                 </ul>
                 <span class="navbar-text me-3 text-light">
-                    Usuario: {% if employee.user.first_name or employee.user.last_name %}{{ employee.user.first_name }} {{ employee.user.last_name }}{% else %}{{ employee.user.username }}{% endif %} | 
-                    Departamento: {{ employee.department.name }}
+                    Usuario: {{ user.username }}
+                    {% if employee %}
+                    | Departamento: {{ employee.department.name }}
+                    {% elif user.is_superuser %}
+                    | Super Administrador
+                    {% endif %}
                 </span>
                 <a href="{% url 'logout' %}" class="btn btn-outline-light btn-sm">Cerrar sesión</a>
             </div>

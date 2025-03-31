@@ -131,10 +131,74 @@ def organize_departments_hierarchy(departments):
 @login_required
 def company_dashboard(request):
     """Dashboard principal para usuarios de compañía"""
+    # Manejo especial para superusuarios
+    if request.user.is_superuser and not hasattr(request.user, 'employee'):
+        # Obtener primera compañía disponible
+        company = Company.objects.first()
+        if not company:
+            messages.warning(request, "No hay compañías disponibles")
+            return redirect('admin_dashboard')
+            
+        # Definir variables necesarias para la plantilla
+        department = None
+        employee = None
+        visible_departments = list(Department.objects.filter(company=company))
+        selected_dept = visible_departments[0] if visible_departments else None
+        
+        # Obtener el dashboard
+        try:
+            dashboard = CompanyDashboard.objects.get(company=company)
+        except CompanyDashboard.DoesNotExist:
+            messages.warning(request, "No hay dashboard configurado para esta compañía")
+            return render(request, 'dashboard/dashboard.html', {
+                'company': company,
+                'employee': None,
+                'widgets': [],
+                'visible_departments': visible_departments,
+                'departments_hierarchy': organize_departments_hierarchy(visible_departments) if visible_departments else [],
+                'selected_department': selected_dept
+            })
+            
+        # Obtener widgets configurados
+        widget_configs = dashboard.widgets.filter(is_visible=True).order_by('position')
+        
+        # Preparar datos para cada widget
+        widgets_data = []
+        for config in widget_configs:
+            # Añadir el departamento seleccionado a la configuración
+            config_with_dept = config.configuration.copy() if config.configuration else {}
+            if selected_dept:
+                config_with_dept['department_id'] = selected_dept.id
+            
+            # Obtener datos específicos para este widget
+            data = get_widget_data(request, config.widget.code_name, config_with_dept)
+            
+            widgets_data.append({
+                'widget': config.widget,
+                'config': config,
+                'data': data
+            })
+        
+        # Obtener el tema de la compañía
+        try:
+            company_theme = CompanyTheme.objects.get(company=company)
+        except CompanyTheme.DoesNotExist:
+            company_theme = None
+        
+        return render(request, 'dashboard/dashboard.html', {
+            'company': company,
+            'employee': None,
+            'widgets': widgets_data,
+            'visible_departments': visible_departments,
+            'departments_hierarchy': organize_departments_hierarchy(visible_departments) if visible_departments else [],
+            'selected_department': selected_dept,
+            'company_theme': company_theme
+        })
+    
     # Verificar que el usuario pertenece a una compañía
     if not hasattr(request.user, 'employee'):
         messages.error(request, "Tu usuario no está asociado a ninguna compañía")
-        return redirect('logout')
+        return redirect('login')
     
     employee = request.user.employee
     company = employee.company
@@ -143,7 +207,7 @@ def company_dashboard(request):
     # Verificar si la compañía está activa
     if not company.is_active:
         messages.error(request, "Tu compañía está desactivada")
-        return redirect('logout')
+        return redirect('login')
     
     # Obtener el dashboard
     try:
@@ -226,36 +290,62 @@ def company_dashboard(request):
         'company_theme': company_theme,
     })
 
-#Función form_manager actualizada
 @login_required
 @user_passes_test(lambda u: u.is_superuser)
 def form_manager(request):
     """Vista para administrar formularios personalizados"""
-# Special handling for superusers without employee records
+    # Manejo especial para superusuarios sin employee
     if request.user.is_superuser and not hasattr(request.user, 'employee'):
-        # Get any company for superuser operations, or create one if needed
+        # Obtener cualquier compañía para operaciones de superusuario
         company = Company.objects.first()
         if not company:
             company = Company.objects.create(name="Admin Company", slug="admin-company", is_active=True)
             
-        # Create dummy stats for the template
-        department_stats = []
+                # Obtener departamento para filtrar (desde GET)
+        department_id = request.GET.get('department')
+        department_filter = None
+        
+        # Obtener todos los departamentos para el superusuario
         available_departments = Department.objects.filter(company=company)
-        forms = CustomForm.objects.filter(company=company)
+        
+        # Aplicar filtro de departamento si se especifica
+        base_forms = CustomForm.objects.filter(company=company)
+        
+        if department_id:
+            try:
+                department_filter = Department.objects.get(id=department_id, company=company)
+                forms = base_forms.filter(departments=department_filter)
+            except Department.DoesNotExist:
+                forms = base_forms
+                messages.warning(request, "El departamento seleccionado no existe")
+        else:
+            forms = base_forms
+        
+        # Calcular estadísticas de formularios por departamento para superusuario
+        department_stats = []
+        for dept in available_departments:
+            form_count = base_forms.filter(departments=dept).count()
+            department_stats.append({
+                'department': dept,
+                'form_count': form_count
+            })
+        
+        # Ordenar por cantidad de formularios (mayor a menor)
+        department_stats.sort(key=lambda x: x['form_count'], reverse=True)
         
         return render(request, 'dashboard/forms/form_manager.html', {
             'forms': forms,
             'company': company,
-            'employee': None,  # No employee for superuser
+            'employee': None,  # No employee para superusuario
             'available_departments': available_departments,
             'department_filter': None,
             'department_stats': department_stats
         })
     
-    # Original code for users with employee records
+    # Código original para usuarios con perfil de empleado
     if not hasattr(request.user, 'employee'):
         messages.error(request, "Tu usuario no está asociado a ninguna compañía")
-        return redirect('logout')
+        return redirect('login')
     
     employee = request.user.employee
     company = employee.company
@@ -314,31 +404,38 @@ def form_manager(request):
 @user_passes_test(lambda u: u.is_superuser)
 def create_edit_form(request, form_id=None):
     """Vista para crear o editar formularios personalizados"""
-   # Special handling for superusers without employee records
+    # Manejo especial para superusuarios sin employee
     if request.user.is_superuser and not hasattr(request.user, 'employee'):
-        # Get any company for superuser operations, or create one if needed
+        # Obtener cualquier compañía para operaciones de superusuario
         company = Company.objects.first()
         if not company:
             company = Company.objects.create(name="Admin Company", slug="admin-company", is_active=True)
-            
-        # Create dummy stats for the template
-        department_stats = []
-        available_departments = Department.objects.filter(company=company)
-        forms = CustomForm.objects.filter(company=company)
         
-        return render(request, 'dashboard/forms/form_manager.html', {
-            'forms': forms,
+        # Determinar si estamos editando o creando
+        if form_id:
+            custom_form = get_object_or_404(CustomForm, id=form_id, company=company)
+            is_new = False
+        else:
+            custom_form = CustomForm(company=company)
+            is_new = True
+            
+        # Obtener departamentos para asignar
+        available_departments = Department.objects.filter(company=company)
+        
+        return render(request, 'dashboard/forms/create_edit_form.html', {
+            'custom_form': custom_form,
+            'is_new': is_new,
             'company': company,
-            'employee': None,  # No employee for superuser
+            'employee': None,
             'available_departments': available_departments,
-            'department_filter': None,
-            'department_stats': department_stats
+            'selected_departments': custom_form.departments.all() if not is_new else [],
+            'field_groups': custom_form.field_groups.all() if not is_new else []
         })
     
-    # Original code for users with employee records
+    # Código original para usuarios con perfil de empleado
     if not hasattr(request.user, 'employee'):
         messages.error(request, "Tu usuario no está asociado a ninguna compañía")
-        return redirect('logout')
+        return redirect('login')
     
     employee = request.user.employee
     company = employee.company
@@ -353,6 +450,9 @@ def create_edit_form(request, form_id=None):
     
     if request.method == 'POST':
         # Procesar datos del formulario
+        print("Datos del formulario recibidos:", request.POST)
+        print("Archivos recibidos:", request.FILES)
+        
         form_data = {
             'name': request.POST.get('name'),
             'description': request.POST.get('description'),
@@ -360,20 +460,27 @@ def create_edit_form(request, form_id=None):
             'is_active': 'is_active' in request.POST
         }
         
-        # Validar datos
-        errors = {}
-        if not form_data['name']:
-            errors['name'] = "El nombre es obligatorio"
-        
-        if not form_data['code_name']:
-            errors['code_name'] = "El código identificador es obligatorio"
-        elif not is_new and CustomForm.objects.filter(company=company, code_name=form_data['code_name']).exclude(id=custom_form.id).exists():
-            errors['code_name'] = "Este código ya está en uso"
-        elif is_new and CustomForm.objects.filter(company=company, code_name=form_data['code_name']).exists():
-            errors['code_name'] = "Este código ya está en uso"
-        
-        if not errors:
-            # Guardar formulario
+        # Validar datos de manera más explícita
+    errors = {}
+    if not form_data['name']:
+        errors['name'] = "El nombre es obligatorio"
+        print("Error: El nombre es obligatorio")
+    
+    if not form_data['code_name']:
+        errors['code_name'] = "El código identificador es obligatorio"
+        print("Error: El código identificador es obligatorio")
+    elif not is_new and CustomForm.objects.filter(company=company, code_name=form_data['code_name']).exclude(id=custom_form.id).exists():
+        errors['code_name'] = "Este código ya está en uso"
+        print(f"Error: El código {form_data['code_name']} ya está en uso")
+    elif is_new and CustomForm.objects.filter(company=company, code_name=form_data['code_name']).exists():
+        errors['code_name'] = "Este código ya está en uso"
+        print(f"Error: El código {form_data['code_name']} ya está en uso")
+    
+    # Si no hay errores, continuar con el guardado
+    if not errors:
+        try:
+            # Guardar formulario con manejo explícito de errores
+            print("Guardando formulario...")
             custom_form.name = form_data['name']
             custom_form.description = form_data['description']
             custom_form.code_name = form_data['code_name']
@@ -381,6 +488,13 @@ def create_edit_form(request, form_id=None):
             if is_new:
                 custom_form.company = company
             custom_form.save()
+            print("Formulario base guardado correctamente")
+            
+            # Guardar departamentos asignados
+            selected_departments = request.POST.getlist('departments')
+            print(f"Departamentos seleccionados: {selected_departments}")
+            custom_form.departments.set(selected_departments)
+            print("Departamentos guardados correctamente")
             
             # Guardar departamentos asignados
             selected_departments = request.POST.getlist('departments')
@@ -525,10 +639,13 @@ def create_edit_form(request, form_id=None):
             
             messages.success(request, f"Formulario '{custom_form.name}' guardado correctamente")
             return redirect('form_manager')
-        else:
-            # Mostrar errores
-            for field, error in errors.items():
-                messages.error(request, error)
+        except Exception as e:
+            print(f"Error al guardar formulario: {str(e)}")
+            messages.error(request, f"Error al guardar formulario: {str(e)}")
+    else:
+        # Mostrar errores
+        for field, error in errors.items():
+            messages.error(request, error)
     
     # Obtener departamentos para asignar
     if request.user.is_superuser or employee.department.access_level == 'gerencial':
@@ -550,12 +667,16 @@ def create_edit_form(request, form_id=None):
 @user_passes_test(lambda u: u.is_superuser)
 def delete_form(request, form_id):
     """Vista para eliminar un formulario personalizado"""
-    if not hasattr(request.user, 'employee'):
-        messages.error(request, "Tu usuario no está asociado a ninguna compañía")
-        return redirect('logout')
-    
-    employee = request.user.employee
-    company = employee.company
+    if request.user.is_superuser and not hasattr(request.user, 'employee'):
+        company = Company.objects.first()
+        if not company:
+            messages.error(request, "No hay compañías disponibles")
+            return redirect('admin:index')
+    else:
+        if not hasattr(request.user, 'employee'):
+            messages.error(request, "Tu usuario no está asociado a ninguna compañía")
+            return redirect('login')
+        company = request.user.employee.company
     
     custom_form = get_object_or_404(CustomForm, id=form_id, company=company)
     
@@ -568,17 +689,55 @@ def delete_form(request, form_id):
     return render(request, 'dashboard/forms/delete_form_confirm.html', {
         'custom_form': custom_form,
         'company': company,
-        'employee': employee
+        'employee': getattr(request.user, 'employee', None)
     })
-
-# dashboard/views.py - Actualizar la función fill_form
 
 @login_required
 def fill_form(request, form_code):
     """Vista para completar un formulario personalizado"""
+    if request.user.is_superuser and not hasattr(request.user, 'employee'):
+        company = Company.objects.first()
+        if not company:
+            messages.error(request, "No hay compañías disponibles")
+            return redirect('admin:index')
+            
+        # Obtener el formulario personalizado
+        try:
+            custom_form = CustomForm.objects.get(company=company, code_name=form_code, is_active=True)
+        except CustomForm.DoesNotExist:
+            messages.error(request, "El formulario solicitado no existe o no está activo")
+            return redirect('company_dashboard')
+            
+        # Obtener departamentos
+        visible_departments = list(Department.objects.filter(company=company))
+        selected_dept = visible_departments[0] if visible_departments else None
+        
+        # Obtener registros recientes para este formulario y departamento
+        recent_records = []
+        if selected_dept:
+            recent_records = FormData.objects.filter(
+                form=custom_form,
+                department=selected_dept
+            ).order_by('-date_created')[:10]
+        
+        # Obtener grupos de campos para este formulario
+        field_groups = custom_form.field_groups.all().order_by('order')
+        
+        return render(request, 'dashboard/forms/fill_form.html', {
+            'custom_form': custom_form,
+            'form_fields': custom_form.fields.all().order_by('group__order', 'group', 'order'),
+            'field_groups': field_groups,
+            'company': company,
+            'employee': None,
+            'visible_departments': visible_departments,
+            'selected_department': selected_dept,
+            'recent_records': recent_records
+        })
+    
+    # Verificar que el usuario pertenece a una compañía
     if not hasattr(request.user, 'employee'):
         messages.error(request, "Tu usuario no está asociado a ninguna compañía")
-        return redirect('logout')
+        return redirect('login')
     
     employee = request.user.employee
     company = employee.company
@@ -587,7 +746,7 @@ def fill_form(request, form_code):
     # Verificar si la compañía está activa
     if not company.is_active:
         messages.error(request, "Tu compañía está desactivada")
-        return redirect('logout')
+        return redirect('login')
     
     # Obtener el formulario personalizado
     try:
@@ -727,9 +886,79 @@ def fill_form(request, form_code):
 @login_required
 def view_form_data(request, form_code):
     """Vista para ver los datos enviados de un formulario"""
+    if request.user.is_superuser and not hasattr(request.user, 'employee'):
+        company = Company.objects.first()
+        if not company:
+            messages.error(request, "No hay compañías disponibles")
+            return redirect('admin:index')
+            
+        # Obtener el formulario personalizado
+        try:
+            custom_form = CustomForm.objects.get(company=company, code_name=form_code)
+        except CustomForm.DoesNotExist:
+            messages.error(request, "El formulario solicitado no existe")
+            return redirect('company_dashboard')
+            
+        # Obtener departamentos
+        visible_departments = list(Department.objects.filter(company=company))
+        selected_dept = visible_departments[0] if visible_departments else None
+        
+        # Configurar filtros de fecha
+        start_date = request.GET.get('start_date')
+        end_date = request.GET.get('end_date')
+        
+        date_filter = {}
+        if start_date:
+            try:
+                date_filter['date_created__gte'] = datetime.datetime.strptime(start_date, '%Y-%m-%d')
+            except:
+                pass
+        
+        if end_date:
+            try:
+                # Añadir un día para incluir todo el día final
+                end_date_obj = datetime.datetime.strptime(end_date, '%Y-%m-%d')
+                end_date_obj = end_date_obj + datetime.timedelta(days=1)
+                date_filter['date_created__lt'] = end_date_obj
+            except:
+                pass
+        
+        # Obtener datos para el departamento seleccionado
+        if selected_dept:
+            records = FormData.objects.filter(
+                form=custom_form,
+                department=selected_dept,
+                **date_filter
+            ).order_by('-date_created')
+        else:
+            records = FormData.objects.none()
+        
+        # Paginación
+        page = request.GET.get('page', 1)
+        paginator = Paginator(records, 25)  # 25 registros por página
+        
+        try:
+            page_obj = paginator.page(page)
+        except PageNotAnInteger:
+            page_obj = paginator.page(1)
+        except EmptyPage:
+            page_obj = paginator.page(paginator.num_pages)
+        
+        return render(request, 'dashboard/forms/view_form_data.html', {
+            'custom_form': custom_form,
+            'form_fields': custom_form.fields.all().order_by('order'),
+            'company': company,
+            'employee': None,
+            'visible_departments': visible_departments,
+            'selected_department': selected_dept,
+            'records': page_obj,
+            'start_date': start_date,
+            'end_date': end_date
+        })
+        
     if not hasattr(request.user, 'employee'):
         messages.error(request, "Tu usuario no está asociado a ninguna compañía")
-        return redirect('logout')
+        return redirect('login')
     
     employee = request.user.employee
     company = employee.company
@@ -738,7 +967,7 @@ def view_form_data(request, form_code):
     # Verificar si la compañía está activa
     if not company.is_active:
         messages.error(request, "Tu compañía está desactivada")
-        return redirect('logout')
+        return redirect('login')
     
     # Obtener el formulario personalizado
     try:
@@ -838,9 +1067,24 @@ def view_form_data(request, form_code):
 @login_required
 def list_available_forms(request):
     """Lista todos los formularios disponibles para el usuario"""
+    if request.user.is_superuser and not hasattr(request.user, 'employee'):
+        company = Company.objects.first()
+        if not company:
+            messages.error(request, "No hay compañías disponibles")
+            return redirect('admin:index')
+            
+        # Obtener todos los formularios activos
+        forms = CustomForm.objects.filter(company=company, is_active=True)
+        
+        return render(request, 'dashboard/forms/list_forms.html', {
+            'forms': forms,
+            'company': company,
+            'employee': None
+        })
+        
     if not hasattr(request.user, 'employee'):
         messages.error(request, "Tu usuario no está asociado a ninguna compañía")
-        return redirect('logout')
+        return redirect('login')
     
     employee = request.user.employee
     company = employee.company
@@ -872,18 +1116,22 @@ def list_available_forms(request):
         'employee': employee
     })
 
-# dashboard/views.py - Añadir al final
-
 @login_required
 @user_passes_test(lambda u: u.is_superuser)
 def company_theme(request):
     """Vista para personalizar el tema de la compañía"""
-    if not hasattr(request.user, 'employee'):
-        messages.error(request, "Tu usuario no está asociado a ninguna compañía")
-        return redirect('logout')
-    
-    employee = request.user.employee
-    company = employee.company
+    if request.user.is_superuser and not hasattr(request.user, 'employee'):
+        company = Company.objects.first()
+        if not company:
+            messages.error(request, "No hay compañías disponibles")
+            return redirect('admin:index')
+        employee = None
+    else:
+        if not hasattr(request.user, 'employee'):
+            messages.error(request, "Tu usuario no está asociado a ninguna compañía")
+            return redirect('login')
+        employee = request.user.employee
+        company = employee.company
     
     # Obtener o crear el tema de la compañía
     theme, created = CompanyTheme.objects.get_or_create(company=company)
@@ -958,8 +1206,6 @@ def theme_context_processor(request):
             pass
     
     return context
-
-# dashboard/views.py - Añadir vista para dashboard de administrador
 
 @login_required
 @user_passes_test(lambda u: u.is_superuser)

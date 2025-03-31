@@ -125,4 +125,251 @@
             </button>
         </li>
         <li class="nav-item" role="presentation">
-            <button class="nav-link" id="custom-tab" data-bs-toggle="tab" data-bs-target="#custom" type="button" role="tab" aria
+            <button class="nav-link" id="custom-tab" data-bs-toggle="tab" data-bs-target="#custom" type="button" role="tab" aria-controls="custom" aria-selected="false">
+                <i class="fas fa-code"></i> Personalización avanzada
+            </button>
+        </li>
+    </ul>
+    
+    <!-- Contenido de las pestañas -->
+    <div class="tab-content" id="themeTabContent">
+        <!-- Pestaña de vista previa -->
+        <div class="tab-pane fade show active" id="preview" role="tabpanel" aria-labelledby="preview-tab">
+            <div class="theme-preview">
+                <div class="preview-navbar">
+                    <strong>Vista previa de la barra de navegación</strong>
+                </div>
+                <div class="preview-content">
+                    <h4>Vista previa del tema</h4>
+                    <p>Así se verá tu dashboard con el tema seleccionado.</p>
+                    
+                    <div class="preview-card">
+                        <div class="preview-card-header">
+                            <strong>Encabezado de tarjeta</strong>
+                        </div>
+                        <div class="preview-card-body">
+                            <p>Contenido de ejemplo para mostrar cómo se verán las tarjetas con este tema.</p>
+                            <button class="btn btn-primary">Botón primario</button>
+                            <button class="btn btn-secondary">Botón secundario</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle"></i> Esta es una vista previa aproximada. El aspecto final puede variar ligeramente.
+            </div>
+        </div>
+        
+        <!-- Pestaña de colores y fuentes -->
+        <div class="tab-pane fade" id="colors" role="tabpanel" aria-labelledby="colors-tab">
+            <form method="post" enctype="multipart/form-data" class="theme-section">
+                {% csrf_token %}
+                <h4 class="mb-4">Colores principales</h4>
+                
+                <div class="row mb-4">
+                    <div class="col-md-4">
+                        <div class="form-group mb-3">
+                            <label for="primary_color" class="form-label">Color primario</label>
+                            <div class="input-group">
+                                <span class="input-group-text">
+                                    <div class="color-preview" style="background-color: {{ theme.primary_color }}"></div>
+                                </span>
+                                <input type="color" class="form-control form-control-color" id="primary_color" name="primary_color" value="{{ theme.primary_color }}">
+                                <input type="text" class="form-control" aria-label="Valor hexadecimal" value="{{ theme.primary_color }}">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <div class="form-group mb-3">
+                            <label for="secondary_color" class="form-label">Color secundario</label>
+                            <div class="input-group">
+                                <span class="input-group-text">
+                                    <div class="color-preview" style="background-color: {{ theme.secondary_color }}"></div>
+                                </span>
+                                <input type="color" class="form-control form-control-color" id="secondary_color" name="secondary_color" value="{{ theme.secondary_color }}">
+                                <input type="text" class="form-control" aria-label="Valor hexadecimal" value="{{ theme.secondary_color }}">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <div class="form-group mb-3">
+                            <label for="accent_color" class="form-label">Color de acento</label>
+                            <div class="input-group">
+                                <span class="input-group-text">
+                                    <div class="color-preview" style="background-color: {{ theme.accent_color }}"></div>
+                                </span>
+                                <input type="color" class="form-control form-control-color" id="accent_color" name="accent_color" value="{{ theme.accent_color }}">
+                                <input type="text" class="form-control" aria-label="Valor hexadecimal" value="{{ theme.accent_color }}">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <h4 class="mb-4 mt-5">Colores de texto</h4>
+                
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <div class="form-group mb-3">
+                            <label for="text_color" class="form-label">Color de texto principal</label>
+                            <div class="input-group">
+                                <span class="input-group-text">
+                                    <div class="color-preview" style="background-color: {{ theme.text_color }}"></div>
+                                </span>
+                                <input type="color" class="form-control form-control-color" id="text_color" name="text_color" value="{{ theme.text_color }}">
+                                <input type="text" class="form-control" aria-label="Valor hexadecimal" value="{{ theme.text_color }}">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="form-group mb-3">
+                            <label for="light_text_color" class="form-label">Color de texto claro</label>
+                            <div class="input-group">
+                                <span class="input-group-text">
+                                    <div class="color-preview" style="background-color: {{ theme.light_text_color }}"></div>
+                                </span>
+                                <input type="color" class="form-control form-control-color" id="light_text_color" name="light_text_color" value="{{ theme.light_text_color }}">
+                                <input type="text" class="form-control" aria-label="Valor hexadecimal" value="{{ theme.light_text_color }}">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <h4 class="mb-4 mt-5">Fuentes</h4>
+                
+                <div class="row mb-4">
+                    <div class="col-md-12">
+                        <div class="form-group mb-3">
+                            <label for="font_family" class="form-label">Familia de fuentes</label>
+                            <select class="form-select" id="font_family" name="font_family">
+                                {% for value, label in google_fonts %}
+                                <option value="{{ value }}" {% if theme.font_family == value %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                            
+                            <div class="font-preview mt-3" style="font-family: {{ theme.font_family }}">
+                                <p>Esta es una vista previa de la fuente seleccionada.</p>
+                                <p><strong>Texto en negrita</strong> y <em>texto en cursiva</em>.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-check mb-3">
+                    <input class="form-check-input" type="checkbox" id="enabled" name="enabled" {% if theme.enabled %}checked{% endif %}>
+                    <label class="form-check-label" for="enabled">
+                        Tema habilitado
+                    </label>
+                </div>
+                
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save"></i> Guardar cambios
+                </button>
+            </form>
+        </div>
+        
+        <!-- Pestaña de imágenes -->
+        <div class="tab-pane fade" id="images" role="tabpanel" aria-labelledby="images-tab">
+            <form method="post" enctype="multipart/form-data" class="theme-section">
+                {% csrf_token %}
+                <h4 class="mb-4">Logos e imágenes</h4>
+                
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <div class="form-group mb-3">
+                            <label for="logo" class="form-label">Logo principal</label>
+                            <input type="file" class="form-control" id="logo" name="logo" accept="image/*">
+                            {% if theme.logo %}
+                            <div class="mt-2">
+                                <img src="{{ theme.logo.url }}" alt="Logo actual" class="image-preview">
+                                <div class="form-check mt-2">
+                                    <input class="form-check-input" type="checkbox" id="remove_logo" name="remove_logo">
+                                    <label class="form-check-label" for="remove_logo">
+                                        Eliminar logo actual
+                                    </label>
+                                </div>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="form-group mb-3">
+                            <label for="logo_small" class="form-label">Logo pequeño / Ícono</label>
+                            <input type="file" class="form-control" id="logo_small" name="logo_small" accept="image/*">
+                            {% if theme.logo_small %}
+                            <div class="mt-2">
+                                <img src="{{ theme.logo_small.url }}" alt="Logo pequeño actual" class="image-preview">
+                                <div class="form-check mt-2">
+                                    <input class="form-check-input" type="checkbox" id="remove_logo_small" name="remove_logo_small">
+                                    <label class="form-check-label" for="remove_logo_small">
+                                        Eliminar logo pequeño actual
+                                    </label>
+                                </div>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row mb-4">
+                    <div class="col-md-12">
+                        <div class="form-group mb-3">
+                            <label for="background_image" class="form-label">Imagen de fondo</label>
+                            <input type="file" class="form-control" id="background_image" name="background_image" accept="image/*">
+                            {% if theme.background_image %}
+                            <div class="mt-2">
+                                <img src="{{ theme.background_image.url }}" alt="Imagen de fondo actual" class="image-preview">
+                                <div class="form-check mt-2">
+                                    <input class="form-check-input" type="checkbox" id="remove_background" name="remove_background">
+                                    <label class="form-check-label" for="remove_background">
+                                        Eliminar imagen de fondo actual
+                                    </label>
+                                </div>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save"></i> Guardar cambios
+                </button>
+            </form>
+        </div>
+        
+        <!-- Pestaña de personalización avanzada -->
+        <div class="tab-pane fade" id="custom" role="tabpanel" aria-labelledby="custom-tab">
+            <form method="post" class="theme-section">
+                {% csrf_token %}
+                <h4 class="mb-4">CSS personalizado</h4>
+                
+                <div class="form-group mb-4">
+                    <label for="custom_css" class="form-label">Añade tu propio CSS personalizado</label>
+                    <textarea class="form-control code-editor" id="custom_css" name="custom_css" rows="10">{{ theme.custom_css|default:"" }}</textarea>
+                    <div class="form-text text-muted">El CSS se aplicará después de los estilos por defecto.</div>
+                </div>
+                
+                <h4 class="mb-4 mt-5">JavaScript personalizado</h4>
+                
+                <div class="form-group mb-4">
+                    <label for="custom_js" class="form-label">Añade tu propio JavaScript personalizado</label>
+                    <textarea class="form-control code-editor" id="custom_js" name="custom_js" rows="10">{{ theme.custom_js|default:"" }}</textarea>
+                    <div class="form-text text-muted">El JavaScript se ejecutará después de que se cargue la página.</div>
+                </div>
+                
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle"></i> <strong>Precaución:</strong> El código personalizado puede afectar al funcionamiento de la aplicación. Úsalo con cuidado.
+                </div>
+                
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save"></i> Guardar cambios
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
