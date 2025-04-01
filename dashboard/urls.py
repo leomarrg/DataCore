@@ -17,4 +17,6 @@ urlpatterns = [
 
     path('settings/theme/', views.company_theme, name='company_theme'),
     path('admin/dashboard/', views.admin_dashboard, name='admin_dashboard'),
+    path('admin/select-company/', views.select_admin_company, name='select_admin_company'),
+
 ]

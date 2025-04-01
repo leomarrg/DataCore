@@ -1,0 +1,56 @@
+{% extends "dashboard/base.html" %}
+
+{% block title %}Seleccionar Compañía{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Seleccionar Compañía</h1>
+        <a href="{% url 'admin_dashboard' %}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Volver al dashboard
+        </a>
+    </div>
+    
+    {% if current_company %}
+    <div class="alert alert-info">
+        <strong>Compañía actual:</strong> {{ current_company.name }}
+    </div>
+    {% endif %}
+    
+    <div class="card">
+        <div class="card-header bg-light">
+            <h5 class="mb-0">Compañías disponibles</h5>
+        </div>
+        <div class="card-body">
+            <form method="post">
+                {% csrf_token %}
+                <div class="row">
+                    {% for company in companies %}
+                    <div class="col-md-4 mb-3">
+                        <div class="card {% if current_company and current_company.id == company.id %}border-primary{% endif %}">
+                            <div class="card-body">
+                                <h5 class="card-title">{{ company.name }}</h5>
+                                <p class="card-text">
+                                    <small>Departamentos: {{ company.departments.count }}</small><br>
+                                    <small>Empleados: {{ company.employees.count }}</small><br>
+                                    <small>Estado: {% if company.is_active %}Activa{% else %}Inactiva{% endif %}</small>
+                                </p>
+                                <button type="submit" name="company_id" value="{{ company.id }}" class="btn btn-primary w-100">
+                                    Seleccionar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="col-12">
+                        <div class="alert alert-warning">
+                            No hay compañías disponibles. Primero crea una compañía desde el panel de administración.
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
