@@ -1,4 +1,5 @@
 <!-- dashboard/templates/dashboard/base.html -->
+ {% load static %}
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -17,165 +18,342 @@
     <style>
         :root {
             /* Variables CSS por defecto (serán sobrescritas por el tema de la compañía) */
-            --primary-color: #56b3c7;
-            --secondary-color: #8fc73e;
+            --primary-color: #56b3c7;        /* Color para el navbar */
+            --secondary-color: #8fc73e;      /* Color para el footer */
+            --sidebar-color: #2c3e50;        /* Color para el sidebar */
             --accent-color: #FF9613;
             --text-color: #333333;
             --light-text-color: #ffffff;
             --font-family: 'Montserrat', sans-serif;
+            --sidebar-width: 250px;
+            --navbar-height: 60px;
         }
         
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: var(--font-family);
+            color: var(--text-color);
+            background-color: #f5f7f9;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+        
+        /* Navbar fixed at top */
+        .navbar {
+            height: var(--navbar-height);
+            padding: 0 20px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1030;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            background-color: var(--primary-color);
+        }
+        
+        /* Main layout container */
+        .main-wrapper {
+            display: flex;
+            flex: 1;
+            margin-top: var(--navbar-height);
+            min-height: calc(100vh - var(--navbar-height));
+        }
+        
+        /* Sidebar styles */
+        .sidebar {
+            width: var(--sidebar-width);
+            background-color: var(--sidebar-color);
+            color: var(--light-text-color);
+            position: fixed;
+            top: var(--navbar-height);
+            left: 0;
+            height: calc(100vh - var(--navbar-height));
+            overflow-y: auto;
+            z-index: 900;
+            box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+        }
+        
+        .sidebar-nav {
+            padding: 15px 0;
+        }
+        
+        .sidebar-item {
+            padding: 10px 15px;
+            display: block;
+            color: rgba(255,255,255,0.85);
+            text-decoration: none;
+            transition: all 0.3s;
+            border-left: 3px solid transparent;
+        }
+        
+        .sidebar-item:hover, .sidebar-item:focus {
+            background-color: rgba(255,255,255,0.1);
+            color: var(--light-text-color);
+        }
+        
+        .sidebar-item.active {
+            background-color: rgba(255,255,255,0.2);
+            color: var(--light-text-color);
+            border-left-color: var(--accent-color);
+        }
+        
+        .sidebar-dropdown {
+            padding: 0;
+        }
+        
+        .sidebar-dropdown-toggle {
+            padding: 10px 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: rgba(255,255,255,0.85);
+            text-decoration: none;
+            cursor: pointer;
+            transition: all 0.3s;
+            border-left: 3px solid transparent;
+        }
+        
+        .sidebar-dropdown-toggle:hover, .sidebar-dropdown-toggle.active {
+            background-color: rgba(255,255,255,0.1);
+            color: var(--light-text-color);
+        }
+        
+        .sidebar-dropdown-toggle.active {
+            border-left-color: var(--accent-color);
+        }
+        
+        .sidebar-dropdown-menu {
+            padding-left: 20px;
+            list-style: none;
+            display: none;
+        }
+        
+        .sidebar-dropdown-menu.show {
+            display: block;
+        }
+        
+        .sidebar-dropdown-item {
+            padding: 8px 15px;
+            display: block;
+            color: rgba(255,255,255,0.75);
+            text-decoration: none;
+            font-size: 0.95rem;
+            transition: all 0.3s;
+        }
+        
+        .sidebar-dropdown-item:hover, .sidebar-dropdown-item:focus, .sidebar-dropdown-item.active {
+            color: var(--light-text-color);
+            background-color: rgba(255,255,255,0.05);
+        }
+        
+        /* Main content area */
+        .content-wrapper {
+            flex: 1;
+            margin-left: var(--sidebar-width);
+            display: flex;
+            flex-direction: column;
+            min-height: calc(100vh - var(--navbar-height));
+        }
+        
+        .content-main {
+            flex: 1;
+            padding: 20px;
+            padding-bottom: 30px; /* Add padding at the bottom of content */
+        }
+        
+        /* Footer styles - full width with spacing */
+        .footer {
+            background-color: var(--primary-color);
+            color: var(--light-text-color);
+            padding: 15px 0;
+            text-align: center;
+            width: 100%; 
+            margin-top: 20px; /* Add margin above the footer */
+        }
+        
+        /* Dashboard widget styles */
         .widget-small { min-height: 200px; }
         .widget-medium { min-height: 300px; }
         .widget-large { min-height: 400px; }
         .dashboard-widget { margin-bottom: 20px; }
         .widget-content { padding: 15px; }
-    </style>
-    
-    <!-- Estilos de tema personalizados para la compañía -->
-    {% if company_theme and company_theme.enabled %}
-    <style id="company-theme-css">
-        {{ company_theme.get_compiled_css|safe }}
-    </style>
-    
-    {% if company_theme.background_image %}
-    <style>
-        body {
-            background-image: url("{{ company_theme.background_image.url }}");
-            background-size: cover;
-            background-attachment: fixed;
-            background-position: center;
+        
+        /* Card enhancements */
+        .card {
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            border-radius: 8px;
+            border: none;
         }
         
-        .card {
-            background-color: rgba(255, 255, 255, 0.95);
+        .card-header {
+            background-color: white;
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+            font-weight: 600;
+            border-radius: 8px 8px 0 0 !important;
         }
     </style>
-    {% endif %}
+    <!-- Estilos de tema personalizados para la compañía -->
+    {% if company_theme and company_theme.enabled %}
+        <style id="company-theme-css">
+            {{ company_theme.get_compiled_css|safe }}
+        </style>
+        
+        {% if company_theme.css_file %}
+        <link rel="stylesheet" href="{% static company_theme.css_file %}">
+        {% endif %}
+        
+        {% if company_theme.background_image %}
+        <style>
+            body {
+                background-image: url("{{ company_theme.background_image.url }}");
+                background-size: cover;
+                background-attachment: fixed;
+                background-position: center;
+            }
+            
+            .card {
+                background-color: rgba(255, 255, 255, 0.95);
+            }
+        </style>
+        {% endif %}
     {% endif %}
     
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     {% block extra_head %}{% endblock %}
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
-        <div class="container">
-            <a class="navbar-brand" href="#">
-                {% if company_theme and company_theme.enabled and company_theme.logo %}
-                <img src="{{ company_theme.logo.url }}" alt="{{ company.name }}" height="40" class="d-inline-block align-top me-2">
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container-fluid">
+            <!-- Logo/Company Name -->
+            <a class="navbar-brand" href="{% url 'company_dashboard' %}">
+                {% if company_theme and company_theme.enabled and company_theme.logo %}                <img src="{{ company_theme.logo.url }}" alt="{{ company.name }}" height="40" class="d-inline-block align-top me-2">
                 {% else %}
                 {{ company.name|default:"Panel de Administración" }}
                 {% endif %}
             </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav me-auto">
-                    <li class="nav-item">
-                        <a class="nav-link {% if request.path == '/dashboard/' %}active{% endif %}" href="{% url 'company_dashboard' %}">Dashboard</a>
-                    </li>
-                    
-                    <!-- Menú desplegable para formularios -->
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle {% if '/forms/' in request.path %}active{% endif %}" href="#" id="formsDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            Formularios
-                        </a>
-                        <ul class="dropdown-menu" aria-labelledby="formsDropdown">
-                            {% if user.is_superuser %}
-                            <li>
-                                <a class="dropdown-item {% if request.path == '/dashboard/forms/' %}active{% endif %}" href="{% url 'form_manager' %}">
-                                    <i class="fas fa-cogs"></i> Gestionar formularios
-                                </a>
-                            </li>
-                            <li><hr class="dropdown-divider"></li>
-                            {% endif %}
-                            
-                            <!-- Mostrar los formularios disponibles para el usuario -->
-                            {% if available_forms %}
-                                {% for form in available_forms %}
-                                <li>
-                                    <a class="dropdown-item {% if request.path == '/dashboard/forms/'|add:form.code_name|add:'/' %}active{% endif %}" 
-                                    href="{% url 'fill_form' form.code_name %}">
-                                        <i class="fas fa-file-alt"></i> {{ form.name }}
-                                    </a>
-                                </li>
-                                {% endfor %}
-                                <li>
-                                    <a class="dropdown-item {% if request.path == '/dashboard/forms/list/' %}active{% endif %}" href="{% url 'list_forms' %}">
-                                        <i class="fas fa-list"></i> Ver todos los formularios
-                                    </a>
-                                </li>
-                                <li><hr class="dropdown-divider"></li>
-                            {% else %}
-                            <li><a class="dropdown-item disabled" href="#">No hay formularios disponibles</a></li>
-                            {% endif %}
-                        </ul>
-                    </li>
-                    
-                    {% if visible_departments|length > 1 %}
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" id="navbarDepartmentDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            Departamentos
-                        </a>
-                        <ul class="dropdown-menu" aria-labelledby="navbarDepartmentDropdown">
-                            {% for dept in visible_departments %}
-                            <li>
-                                <a class="dropdown-item {% if dept.id == selected_department.id %}active{% endif %}" 
-                                href="{% url 'company_dashboard' %}?department={{ dept.id }}">
-                                    {{ dept.name }}
-                                </a>
-                            </li>
-                            {% endfor %}
-                        </ul>
-                    </li>
-                    {% endif %}
-                    
-                    <!-- Menú de configuración - Solo para superusuarios -->
-                    {% if user.is_superuser %}
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" id="settingsDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            Configuración
-                        </a>
-                        <ul class="dropdown-menu" aria-labelledby="settingsDropdown">
-                            <li>
-                                <a class="dropdown-item" href="{% url 'company_theme' %}">
-                                    <i class="fas fa-palette"></i> Personalizar tema
-                                </a>
-                            </li>
-                            <li>
-                                <a class="dropdown-item" href="{% url 'admin:index' %}">
-                                    <i class="fas fa-tools"></i> Administración Django
-                                </a>
-                            </li>
-                            <li>
-                                <a class="dropdown-item" href="{% url 'admin_dashboard' %}">
-                                    <i class="fas fa-tachometer-alt"></i> Dashboard Admin
-                                </a>
-                            </li>
-                            <li>
-                                <a class="dropdown-item" href="{% url 'select_admin_company' %}">
-                                    <i class="fas fa-exchange-alt"></i> Cambiar Compañía
-                                </a>
-                            </li>
-                        </ul>
-                    </li>
-                    {% endif %}
-                </ul>
-                <span class="navbar-text me-3 text-light">
-                    Usuario: {{ user.username }}
-                    {% if employee %}
-                    | Departamento: {{ employee.department.name }}
-                    {% elif user.is_superuser %}
-                    | Super Administrador
-                    {% endif %}
-                </span>
-                <a href="{% url 'logout' %}" class="btn btn-outline-light btn-sm">Cerrar sesión</a>
-            </div>
+            
+            <!-- User info on right -->
+            <span class="navbar-text me-3 text-light">
+                Usuario: {{ user.username }}
+                {% if employee %}
+                | Departamento: {{ employee.department.name }}
+                {% elif user.is_superuser %}
+                | Super Administrador
+                {% endif %}
+            </span>
         </div>
     </nav>
 
-    {% block content %}{% endblock %}
+    <div class="main-wrapper">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <nav class="sidebar-nav">
+                <!-- Dashboard Link -->
+                <a href="{% url 'company_dashboard' %}" class="sidebar-item {% if request.path == '/dashboard/' %}active{% endif %}">
+                    <i class="fas fa-tachometer-alt me-2"></i> Dashboard
+                </a>
+                
+                <!-- Forms Dropdown -->
+                <div class="sidebar-dropdown">
+                    <a class="sidebar-dropdown-toggle {% if '/forms/' in request.path %}active{% endif %}" data-bs-toggle="collapse" href="#formsMenu" role="button">
+                        <span><i class="fas fa-file-alt me-2"></i> Formularios</span>
+                        <i class="fas fa-chevron-down"></i>
+                    </a>
+                    <div class="sidebar-dropdown-menu collapse {% if '/forms/' in request.path %}show{% endif %}" id="formsMenu">
+                        {% if user.is_superuser %}
+                        <a class="sidebar-dropdown-item {% if request.path == '/dashboard/forms/' %}active{% endif %}" href="{% url 'form_manager' %}">
+                            <i class="fas fa-cogs me-2"></i> Gestionar formularios
+                        </a>
+                        <div class="dropdown-divider"></div>
+                        {% endif %}
+                        
+                        <!-- Mostrar los formularios disponibles para el usuario -->
+                        {% if available_forms %}
+                            {% for form in available_forms %}
+                            <a class="sidebar-dropdown-item {% if request.path == '/dashboard/forms/'|add:form.code_name|add:'/' %}active{% endif %}" 
+                               href="{% url 'fill_form' form.code_name %}">
+                                <i class="fas fa-file me-2"></i> {{ form.name }}
+                            </a>
+                            {% endfor %}
+                            <a class="sidebar-dropdown-item {% if request.path == '/dashboard/forms/list/' %}active{% endif %}" href="{% url 'list_forms' %}">
+                                <i class="fas fa-list me-2"></i> Ver todos los formularios
+                            </a>
+                        {% else %}
+                        <span class="sidebar-dropdown-item disabled">No hay formularios disponibles</span>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <!-- Departments Dropdown -->
+                {% if visible_departments|length > 1 %}
+                <div class="sidebar-dropdown">
+                    <a class="sidebar-dropdown-toggle" data-bs-toggle="collapse" href="#departmentsMenu" role="button">
+                        <span><i class="fas fa-sitemap me-2"></i> Departamentos</span>
+                        <i class="fas fa-chevron-down"></i>
+                    </a>
+                    <div class="sidebar-dropdown-menu collapse" id="departmentsMenu">
+                        {% for dept in visible_departments %}
+                        <a class="sidebar-dropdown-item {% if dept.id == selected_department.id %}active{% endif %}" 
+                           href="{% url 'company_dashboard' %}?department={{ dept.id }}">
+                            {{ dept.name }}
+                        </a>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+                
+                <!-- Settings Dropdown - Only for superusers -->
+                {% if user.is_superuser %}
+                <div class="sidebar-dropdown">
+                    <a class="sidebar-dropdown-toggle" data-bs-toggle="collapse" href="#settingsMenu" role="button">
+                        <span><i class="fas fa-cog me-2"></i> Configuración</span>
+                        <i class="fas fa-chevron-down"></i>
+                    </a>
+                    <div class="sidebar-dropdown-menu collapse" id="settingsMenu">
+                        <a class="sidebar-dropdown-item" href="{% url 'company_theme' %}">
+                            <i class="fas fa-palette me-2"></i> Personalizar tema
+                        </a>
+                        <a class="sidebar-dropdown-item" href="{% url 'admin:index' %}">
+                            <i class="fas fa-tools me-2"></i> Administración Django
+                        </a>
+                        <a class="sidebar-dropdown-item" href="{% url 'admin_dashboard' %}">
+                            <i class="fas fa-tachometer-alt me-2"></i> Dashboard Admin
+                        </a>
+                        <a class="sidebar-dropdown-item" href="{% url 'select_admin_company' %}">
+                            <i class="fas fa-exchange-alt me-2"></i> Cambiar Compañía
+                        </a>
+                    </div>
+                </div>
+                {% endif %}
+                
+                <!-- Logout link -->
+                <a href="{% url 'logout' %}" class="sidebar-item">
+                    <i class="fas fa-sign-out-alt me-2"></i> Cerrar sesión
+                </a>
+            </nav>
+        </aside>
+        
+        <!-- Main Content Area -->
+        <div class="content-wrapper">
+            <div class="content-main">
+                {% block content %}{% endblock %}
+            </div>
+            
+            <!-- Footer - Full width with spacing -->
+            <footer class="footer">
+                <div class="container-fluid">
+                    <p class="mb-0">&copy; 2025 Powered By WhiteCanvasPR. Todos los derechos reservados.</p>
+                </div>
+            </footer>
+        </div>
+    </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     
@@ -185,6 +363,34 @@
         {{ company_theme.custom_js|safe }}
     </script>
     {% endif %}
+    
+    <script>
+        // Initialize active dropdowns based on URL
+        document.addEventListener('DOMContentLoaded', function() {
+            // Check if path contains forms and open dropdown
+            if (window.location.pathname.includes('/forms/')) {
+                document.getElementById('formsMenu').classList.add('show');
+            }
+            
+            // If selected department is set, open dropdown
+            {% if selected_department %}
+            const departmentsMenu = document.getElementById('departmentsMenu');
+            if (departmentsMenu) {
+                departmentsMenu.classList.add('show');
+            }
+            {% endif %}
+            
+            // If path contains settings paths, open dropdown
+            const settingsPaths = ['/dashboard/settings/', '/admin/', '/dashboard/admin/'];
+            const shouldOpenSettings = settingsPaths.some(path => window.location.pathname.includes(path));
+            if (shouldOpenSettings) {
+                const settingsMenu = document.getElementById('settingsMenu');
+                if (settingsMenu) {
+                    settingsMenu.classList.add('show');
+                }
+            }
+        });
+    </script>
     
     {% block extra_js %}{% endblock %}
 </body>

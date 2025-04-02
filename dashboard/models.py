@@ -205,6 +205,10 @@ class CompanyTheme(models.Model):
     
     # Habilitado/Deshabilitado
     enabled = models.BooleanField(default=True, verbose_name="Tema habilitado")
+
+    # En dashboard/models.py, dentro de la clase CompanyTheme
+    css_file = models.CharField(max_length=255, blank=True, null=True, 
+                          verbose_name="Archivo CSS personalizado")
     
     class Meta:
         verbose_name = "Tema de compañía"
@@ -284,3 +288,4 @@ class CompanyTheme(models.Model):
         """Obtiene el tema para una compañía, o crea uno por defecto si no existe"""
         theme, created = CompanyTheme.objects.get_or_create(company=company)
         return theme
+    
