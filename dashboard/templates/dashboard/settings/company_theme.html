@@ -284,6 +284,7 @@
                             <input type="file" class="form-control" id="logo" name="logo" accept="image/*">
                             {% if theme.logo %}
                             <div class="mt-2">
+                                <p>Debug URL: {{ theme.logo.url }}</p>
                                 <img src="{{ theme.logo.url }}" alt="Logo actual" class="image-preview">
                                 <div class="form-check mt-2">
                                     <input class="form-check-input" type="checkbox" id="remove_logo" name="remove_logo">
@@ -352,7 +353,26 @@
                     <textarea class="form-control code-editor" id="custom_css" name="custom_css" rows="10">{{ theme.custom_css|default:"" }}</textarea>
                     <div class="form-text text-muted">El CSS se aplicará después de los estilos por defecto.</div>
                 </div>
-                
+
+                <h4 class="mb-4 mt-5">Archivo CSS personalizado</h4>
+        
+                <div class="form-group mb-4">
+                    <label for="css_file" class="form-label">Ruta del archivo CSS personalizado</label>
+                    <input type="text" class="form-control" id="css_file" name="css_file" value="{{ theme.css_file|default:"" }}">
+                    <div class="form-text text-muted">
+                        Ruta relativa al directorio de estáticos. Por ejemplo: 'css/company/miestilo.css'
+                    </div>
+                    
+                    {% if theme.css_file %}
+                    <div class="form-check mt-3">
+                        <input class="form-check-input" type="checkbox" id="remove_css_file" name="remove_css_file">
+                        <label class="form-check-label" for="remove_css_file">
+                            Eliminar archivo CSS actual
+                        </label>
+                    </div>
+                    {% endif %}
+                </div>
+                        
                 <h4 class="mb-4 mt-5">JavaScript personalizado</h4>
                 
                 <div class="form-group mb-4">

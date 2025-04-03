@@ -1457,6 +1457,8 @@ def company_theme(request):
         theme.custom_css = request.POST.get('custom_css', theme.custom_css)
         theme.custom_js = request.POST.get('custom_js', theme.custom_js)
         theme.enabled = 'enabled' in request.POST
+
+        theme.css_file = request.POST.get('css_file', theme.css_file)
         
         # Procesar archivos subidos
         if 'logo' in request.FILES:

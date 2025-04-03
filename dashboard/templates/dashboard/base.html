@@ -26,7 +26,7 @@
             --light-text-color: #ffffff;
             --font-family: 'Montserrat', sans-serif;
             --sidebar-width: 250px;
-            --navbar-height: 60px;
+            --navbar-height: 100px;
         }
         
         html, body {
@@ -53,8 +53,43 @@
             left: 0;
             right: 0;
             z-index: 1030;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
             background-color: var(--primary-color);
+        }
+
+        .navbar-divider {
+            display: inline-block;    /* Permite darle dimensiones y alineación */
+            width: 4px;               /* <<< Grosor de la línea (ajusta como necesites) */
+            height: 3.5em;              /* Altura de la línea (1em = altura de la fuente actual) */
+            background-color: rgba(255, 255, 255); /* Color de la línea (blanco semitransparente) */
+            /* Puedes usar 'currentColor' para que herede el color del texto .text-light */
+            /* background-color: currentColor; opacity: 0.6; */
+            border-radius: 15%;
+            margin-left: 1.2em;       /* Espacio a la izquierda de la línea */
+            margin-right: 1.2em;      /* Espacio a la derecha de la línea */
+            vertical-align: middle;   /* Alinea la línea verticalmente con el texto */
+        }
+
+        /* --- Añadir en tu archivo CSS personalizado --- */
+
+        /* Estilo para etiquetas en la info de usuario del navbar */
+        .navbar-user-label,
+        .navbar-dept-label,
+        .navbar-role-label {
+            font-weight: 700; /* Bold (Más grueso) */
+            /* Puedes probar 600 si 700 es demasiado */
+        }
+
+        /* Estilo para el nombre de usuario */
+        .navbar-user-name {
+            font-weight: 500; /* Medium (Un "light bold", menos grueso que la etiqueta) */
+            /* Alternativas: 600 (Semi-bold) si quieres un poco más grueso, o 400 (Normal) */
+        }
+
+        /* Estilo para el nombre del departamento o rol (opcional) */
+        .navbar-dept-name,
+        .navbar-role-name {
+            font-weight: 400; /* Normal (Peso estándar) */
+            /* O puedes ponerle 500 si quieres que también sea "light bold" como el username */
         }
         
         /* Main layout container */
@@ -233,19 +268,18 @@
         <div class="container-fluid">
             <!-- Logo/Company Name -->
             <a class="navbar-brand" href="{% url 'company_dashboard' %}">
-                {% if company_theme and company_theme.enabled and company_theme.logo %}                <img src="{{ company_theme.logo.url }}" alt="{{ company.name }}" height="40" class="d-inline-block align-top me-2">
-                {% else %}
-                {{ company.name|default:"Panel de Administración" }}
-                {% endif %}
+                                
+                <img src="{{ company_theme.logo.url }}" alt="{{ company.name }}" height="95" class="d-inline-block align-top me-2">
+                
             </a>
             
             <!-- User info on right -->
             <span class="navbar-text me-3 text-light">
-                Usuario: {{ user.username }}
+                <span class="navbar-user-label">Usuario:</span> <span class="navbar-user-name">{{ user.username }}</span>
                 {% if employee %}
-                | Departamento: {{ employee.department.name }}
+                <span class="navbar-divider"></span><span class="navbar-dept-label">Departamento:</span> <span class="navbar-dept-name">{{ employee.department.name }}</span>
                 {% elif user.is_superuser %}
-                | Super Administrador
+                <span class="navbar-divider"></span><span class="navbar-role-label">Rol:</span> <span class="navbar-role-name">Super Administrador</span> 
                 {% endif %}
             </span>
         </div>
@@ -345,7 +379,7 @@
             <div class="content-main">
                 {% block content %}{% endblock %}
             </div>
-            
+
             <!-- Footer - Full width with spacing -->
             <footer class="footer">
                 <div class="container-fluid">

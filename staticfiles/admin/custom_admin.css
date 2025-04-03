@@ -1,0 +1,4 @@
+/* Ocultar completamente el selector de temas */
+[data-theme-switcher] {
+    display: none !important;
+}
